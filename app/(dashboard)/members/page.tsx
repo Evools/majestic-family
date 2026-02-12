@@ -6,7 +6,6 @@ import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import {
     Crown,
-    MoreVertical,
     Search,
     Shield,
     Swords,
@@ -14,10 +13,28 @@ import {
     UserPlus,
     Users
 } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
-// Mock Data
-const RANKS = [
+interface Member {
+    id: string;
+    name: string | null;
+    staticId: string | null;
+    rank: number;
+    roleName: string;
+    lastActiveAt: string | null;
+    image: string | null;
+}
+
+interface Rank {
+    id: number;
+    name: string;
+    color: string;
+    bg: string;
+    req: string;
+    perms: string;
+}
+
+const RANKS: Rank[] = [
     { id: 10, name: "Leader", color: "text-[#e81c5a]", bg: "bg-[#e81c5a]/10", req: "—", perms: "Full Access" },
     { id: 9, name: "Deputy", color: "text-purple-500", bg: "bg-purple-500/10", req: "Доверие", perms: "Manage, recruiting" },
     { id: 8, name: "Caporegime", color: "text-blue-500", bg: "bg-blue-500/10", req: "Решение лидера", perms: "Lead squads" },
@@ -26,17 +43,31 @@ const RANKS = [
     { id: 1, name: "Novice", color: "text-gray-500", bg: "bg-gray-500/10", req: "Вступление", perms: "Discord access" },
 ];
 
-const MEMBERS = [
-    { name: "Reid Shelby", rank: 10, role: "Leader" },
-    { name: "Arthur Shelby", rank: 9, role: "Capture Lead" },
-    { name: "John Wick", rank: 8, role: "Logistics Lead" },
-    { name: "Sarah Connor", rank: 7, role: "Soldier" },
-    { name: "Ezio Auditore", rank: 6, role: "Recruit" },
-    { name: "Franklin Clinton", rank: 1, role: "Novice" },
-];
-
 export default function MembersPage() {
     const [activeTab, setActiveTab] = useState<'roster' | 'ranks'>('roster');
+    const [members, setMembers] = useState<Member[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [searchQuery, setSearchQuery] = useState('');
+
+    useEffect(() => {
+        const fetchMembers = async () => {
+            try {
+                const res = await fetch('/api/members');
+                const data = await res.json();
+                setMembers(data);
+            } catch (error) {
+                console.error('Error fetching members:', error);
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchMembers();
+    }, []);
+
+    const filteredMembers = members.filter((m: Member) => 
+        (m.name?.toLowerCase().includes(searchQuery.toLowerCase()) || 
+         m.roleName?.toLowerCase().includes(searchQuery.toLowerCase()))
+    );
 
   return (
     <div className="space-y-8">
@@ -47,11 +78,11 @@ export default function MembersPage() {
           <p className="text-gray-400 mt-1">Управление участниками и рангами.</p>
         </div>
         <div className="flex gap-2">
-            <Button variant="outline" size="sm" onClick={() => setActiveTab('ranks')} className={cn(activeTab === 'ranks' && "bg-white/10 text-white")}>
+            <Button variant="outline" size="sm" onClick={() => setActiveTab('ranks')} className={cn("transition-all", activeTab === 'ranks' && "bg-white/10 text-white")}>
                 <Shield className="w-4 h-4 mr-2" />
                 Система рангов
             </Button>
-            <Button variant="outline" size="sm" onClick={() => setActiveTab('roster')} className={cn(activeTab === 'roster' && "bg-white/10 text-white")}>
+            <Button variant="outline" size="sm" onClick={() => setActiveTab('roster')} className={cn("transition-all", activeTab === 'roster' && "bg-white/10 text-white")}>
                 <Users className="w-4 h-4 mr-2" />
                 Список участников
             </Button>
@@ -66,76 +97,107 @@ export default function MembersPage() {
           <>
             {/* Stats Row */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <Card>
+                <Card className="bg-[#0a0a0a] border-[#1f1f1f]">
                     <CardContent className="p-6 flex items-center justify-between">
                         <div>
-                            <p className="text-sm font-medium text-gray-500">Всего участников</p>
-                            <h3 className="text-2xl font-bold text-white mt-1">142</h3>
+                            <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500">Всего участников</p>
+                            <h3 className="text-2xl font-bold text-white mt-1">{members.length}</h3>
                         </div>
                         <div className="p-3 bg-blue-500/10 text-blue-500 rounded-lg">
                             <Users className="w-5 h-5" />
                         </div>
                     </CardContent>
                 </Card>
-                <Card>
+                <Card className="bg-[#0a0a0a] border-[#1f1f1f]">
                     <CardContent className="p-6 flex items-center justify-between">
                         <div>
-                            <p className="text-sm font-medium text-gray-500">Заявок на вступление</p>
-                            <h3 className="text-2xl font-bold text-white mt-1">12</h3>
+                            <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500">Активные (24ч)</p>
+                            <h3 className="text-2xl font-bold text-white mt-1">
+                                {members.filter(m => m.lastActiveAt && new Date(m.lastActiveAt).getTime() > Date.now() - 24 * 60 * 60 * 1000).length}
+                            </h3>
                         </div>
-                        <div className="p-3 bg-yellow-500/10 text-yellow-500 rounded-lg">
-                            <UserPlus className="w-5 h-5" />
+                        <div className="p-3 bg-green-500/10 text-green-500 rounded-lg">
+                            <ActivityIcon />
                         </div>
                     </CardContent>
                 </Card>
             </div>
 
             {/* Members Table */}
-            <Card className="overflow-hidden">
+            <Card className="overflow-hidden bg-[#0a0a0a] border-[#1f1f1f]">
                 <div className="p-4 border-b border-white/5 flex items-center justify-between gap-4">
                     <div className="relative flex-1 max-w-sm">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
-                        <Input placeholder="Поиск участника..." className="pl-9 bg-[#0a0a0a] border-[#1f1f1f] h-9" />
+                        <Input 
+                            placeholder="Поиск участника..." 
+                            className="pl-9 bg-[#050505] border-[#1f1f1f] h-9 text-xs" 
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                        />
                     </div>
                 </div>
                 
                 <div className="overflow-x-auto">
-                    <table className="w-full text-sm text-left">
-                        <thead className="text-xs text-gray-400 uppercase border-b border-white/10 bg-white/5">
-                            <tr>
-                                <th className="px-6 py-4 font-medium tracking-wider">Участник</th>
-                                <th className="px-6 py-4 font-medium tracking-wider">Ранг</th>
-                                <th className="px-6 py-4 font-medium tracking-wider">Роль</th>
-                                <th className="px-6 py-4 font-medium tracking-wider text-right">Действия</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-white/5">
-                            {MEMBERS.map((member, i) => {
-                                const rankInfo = RANKS.find(r => r.id === member.rank) || RANKS[5];
-                                return (
-                                    <tr key={i} className="hover:bg-white/5 transition-colors group">
-                                        <td className="px-6 py-4">
-                                            <div className="flex items-center gap-3">
-                                                <div className="w-8 h-8 rounded-full bg-linear-to-br from-gray-700 to-gray-900 border border-white/10" />
-                                                <span className="font-medium text-white">{member.name}</span>
-                                            </div>
-                                        </td>
-                                        <td className="px-6 py-4">
-                                            <span className={cn("px-2.5 py-1 rounded text-xs font-bold uppercase tracking-wider", rankInfo.bg, rankInfo.color)}>
-                                                {rankInfo.name}
-                                            </span>
-                                        </td>
-                                        <td className="px-6 py-4 text-gray-400">{member.role}</td>
-                                        <td className="px-6 py-4 text-right">
-                                            <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-500 hover:text-white opacity-0 group-hover:opacity-100 transition-opacity">
-                                                <MoreVertical className="w-4 h-4" />
-                                            </Button>
+                    {loading ? (
+                        <div className="py-20 text-center">
+                            <div className="inline-block w-8 h-8 border-2 border-[#e81c5a]/20 border-t-[#e81c5a] rounded-full animate-spin" />
+                            <p className="text-gray-500 text-xs mt-4 uppercase tracking-widest">Загрузка состава...</p>
+                        </div>
+                    ) : (
+                        <table className="w-full text-sm text-left">
+                            <thead className="text-[10px] text-gray-400 uppercase border-b border-white/10 bg-white/5">
+                                <tr>
+                                    <th className="px-6 py-4 font-bold tracking-widest">Участник</th>
+                                    <th className="px-6 py-4 font-bold tracking-widest text-center">Ранг</th>
+                                    <th className="px-6 py-4 font-bold tracking-widest">Роль</th>
+                                    <th className="px-6 py-4 font-bold tracking-widest text-right">Статус</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-white/5">
+                                {filteredMembers.map((member, i) => {
+                                    const rankInfo = RANKS.find(r => r.id === member.rank) || RANKS[RANKS.length - 1];
+                                    const isActive = member.lastActiveAt && new Date(member.lastActiveAt).getTime() > Date.now() - 5 * 60 * 1000;
+                                    
+                                    return (
+                                        <tr key={member.id} className="hover:bg-white/5 transition-colors group">
+                                            <td className="px-6 py-4">
+                                                <div className="flex items-center gap-3">
+                                                    <div className="w-8 h-8 rounded bg-linear-to-br from-gray-700 to-gray-900 border border-white/10 overflow-hidden shrink-0">
+                                                        {member.image && <img src={member.image} className="w-full h-full object-cover" />}
+                                                    </div>
+                                                    <div className="flex flex-col">
+                                                        <span className="font-bold text-white tracking-tight">{member.name || 'Неизвестно'}</span>
+                                                        <span className="text-[9px] text-gray-600 font-mono">ID: {member.staticId || '—'}</span>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td className="px-6 py-4 text-center">
+                                                <span className={cn("inline-block px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider min-w-[80px]", rankInfo.bg, rankInfo.color)}>
+                                                    {rankInfo.name}
+                                                </span>
+                                            </td>
+                                            <td className="px-6 py-4 text-gray-400 text-xs">{member.roleName}</td>
+                                            <td className="px-6 py-4 text-right">
+                                                <div className="flex items-center justify-end gap-2">
+                                                    <span className={cn("text-[10px] uppercase font-bold tracking-widest", isActive ? "text-green-500" : "text-gray-600")}>
+                                                        {isActive ? "Online" : "Offline"}
+                                                    </span>
+                                                    <div className={cn("w-1.5 h-1.5 rounded-full", isActive ? "bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.5)]" : "bg-gray-800")} />
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    );
+                                })}
+                                {filteredMembers.length === 0 && (
+                                    <tr>
+                                        <td colSpan={4} className="px-6 py-20 text-center text-gray-500 text-xs uppercase tracking-widest">
+                                            Участники не найдены
                                         </td>
                                     </tr>
-                                );
-                            })}
-                        </tbody>
-                    </table>
+                                )}
+                            </tbody>
+                        </table>
+                    )}
                 </div>
             </Card>
           </>

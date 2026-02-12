@@ -65,6 +65,8 @@ model User {
   staticId             String?             @unique
   lastActiveAt         DateTime?
   role                 Role                @default(MEMBER)
+  rank                 Int                 @default(1)
+  roleName             String              @default("Novice")
   accounts             Account[]
   sessions             Session[]
   reports              Report[]
