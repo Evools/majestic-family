@@ -17,7 +17,7 @@ type UserContractWithContract = {
   reports: { status: string; id: string }[];
 };
 
-type GlobalContract = Contract & { cycleCount: number };
+type GlobalContract = Contract & { cycleCount: number; alreadyParticipated: boolean };
 
 export default function ContractsPage() {
   const [contracts, setContracts] = useState<GlobalContract[]>([]);
@@ -212,10 +212,11 @@ export default function ContractsPage() {
               const cooldown = getCooldownRemaining(contract.cooldownUntil as any);
               const isTaking = takingContract === contract.id;
               const isFull = contract.cycleCount >= contract.maxSlots;
+              const alreadyParticipated = contract.alreadyParticipated;
               const progress = (contract.cycleCount / contract.maxSlots) * 100;
 
               return (
-                <Card key={contract.id} className={`group relative h-full bg-[#0a0a0a] border-[#1f1f1f] hover:border-[#e81c5a]/20 transition-all duration-300 ${isActive || cooldown || isFull ? 'opacity-60 grayscale-[0.5]' : ''}`}>
+                <Card key={contract.id} className={`group relative h-full bg-[#0a0a0a] border-[#1f1f1f] hover:border-[#e81c5a]/20 transition-all duration-300 ${isActive || cooldown || isFull || alreadyParticipated ? 'opacity-60 grayscale-[0.5]' : ''}`}>
                   <CardContent className="p-6 flex flex-col h-full">
                     {/* Slots Progress */}
                     <div className="mb-6 space-y-1.5">
@@ -241,12 +242,12 @@ export default function ContractsPage() {
                     <div className="mt-auto pt-6">
                       <Button
                         className={`w-full h-11 text-[10px] font-bold uppercase tracking-widest transition-all duration-300 ${
-                          isActive || cooldown || isFull
+                          isActive || cooldown || isFull || alreadyParticipated
                             ? 'bg-white/5 text-gray-600 pointer-events-none'
                             : 'bg-[#e81c5a] hover:bg-[#c21548] text-white shadow-lg shadow-[#e81c5a]/5'
                         }`}
                         onClick={() => handleTakeContract(contract.id)}
-                        disabled={isActive || !!cooldown || isTaking || activeContracts.length >= 3 || isFull}
+                        disabled={isActive || !!cooldown || isTaking || activeContracts.length >= 3 || isFull || alreadyParticipated}
                       >
                         {isTaking ? (
                           <div className="flex items-center gap-2">
@@ -262,6 +263,8 @@ export default function ContractsPage() {
                           </div>
                         ) : isFull ? (
                           'Мест нет'
+                        ) : alreadyParticipated ? (
+                          'Выполнено'
                         ) : activeContracts.length >= 3 ? (
                           'Лимит 3/3'
                         ) : (

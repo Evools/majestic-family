@@ -12,23 +12,6 @@ export async function GET() {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // For each contract, we want to know its current cycle status
-    const allContracts = await prisma.contract.findMany({
-      where: { isActive: true }
-    });
-
-    const contractsWithCycle = await Promise.all(allContracts.map(async (c) => {
-      const cycleStartTime = c.cooldownUntil || new Date(0);
-      const cycleCount = await prisma.userContract.count({
-        where: {
-          contractId: c.id,
-          status: { in: ['ACTIVE', 'COMPLETED'] },
-          startedAt: { gt: cycleStartTime }
-        }
-      });
-      return { ...c, cycleCount };
-    }));
-
     // Find the user
     const user = await prisma.user.findUnique({
       where: { email: session.user.email },
@@ -37,6 +20,34 @@ export async function GET() {
     if (!user) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
+
+    // For each contract, we want to know its current cycle status
+    const allContracts = await prisma.contract.findMany({
+      where: { isActive: true }
+    });
+
+    const contractsWithCycle = await Promise.all(allContracts.map(async (c) => {
+      const cycleCount = await prisma.userContract.count({
+        where: {
+          contractId: c.id,
+          status: { in: ['ACTIVE', 'COMPLETED'] },
+          cycleNumber: c.currentCycle
+        }
+      });
+
+      let alreadyParticipated = false;
+      const participation = await prisma.userContract.findFirst({
+        where: {
+          userId: user.id,
+          contractId: c.id,
+          cycleNumber: c.currentCycle,
+          status: { in: ['ACTIVE', 'COMPLETED'] }
+        }
+      });
+      alreadyParticipated = !!participation;
+
+      return { ...c, cycleCount, alreadyParticipated };
+    }));
 
     // Get user's contracts with report status
     const userContracts = await prisma.userContract.findMany({
@@ -119,13 +130,12 @@ export async function POST(req: Request) {
       }, { status: 400 });
     }
 
-    // NEW: Global Slots Check
-    const cycleStartTime = contract.cooldownUntil || new Date(0);
+    // NEW: Global Slots and Participation Check
     const cycleParticipantsCount = await prisma.userContract.count({
       where: {
         contractId,
-        status: { in: ['ACTIVE', 'COMPLETED'] }, // Cancelled doesn't count
-        startedAt: { gt: cycleStartTime }
+        status: { in: ['ACTIVE', 'COMPLETED'] },
+        cycleNumber: contract.currentCycle
       }
     });
 
@@ -133,6 +143,23 @@ export async function POST(req: Request) {
       return NextResponse.json({
         error: "Contract is full",
         message: "Все доступные места на этот цикл заняты. Дождитесь завершения выполнения всеми участниками или следующего цикла."
+      }, { status: 400 });
+    }
+
+    // Check if user already participated in THIS cycle
+    const userParticipation = await prisma.userContract.findFirst({
+      where: {
+        userId: user.id,
+        contractId,
+        cycleNumber: contract.currentCycle,
+        status: { in: ['ACTIVE', 'COMPLETED'] }
+      }
+    });
+
+    if (userParticipation) {
+      return NextResponse.json({
+        error: "Already participated",
+        message: "Вы уже участвовали в выполнении этого контракта в текущем цикле. Дождитесь следующего обновления или выберите другое задание."
       }, { status: 400 });
     }
 
@@ -167,6 +194,7 @@ export async function POST(req: Request) {
         userId: user.id,
         contractId,
         status: 'ACTIVE',
+        cycleNumber: contract.currentCycle,
       },
       include: {
         contract: true,

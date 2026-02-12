@@ -124,6 +124,7 @@ model Contract {
   level         Int            @default(1)
   isActive      Boolean        @default(true)
   maxSlots      Int            @default(10)
+  currentCycle  Int            @default(1)
   cooldownUntil DateTime?
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
@@ -131,10 +132,11 @@ model Contract {
 }
 
 model UserContract {
-  id         String         @id @default(cuid())
-  userId     String
-  contractId String
-  status     ContractStatus @default(ACTIVE)
+  id          String         @id @default(cuid())
+  userId      String
+  contractId  String
+  status      ContractStatus @default(ACTIVE)
+  cycleNumber Int            @default(1)
 
   startedAt   DateTime  @default(now())
   completedAt DateTime?

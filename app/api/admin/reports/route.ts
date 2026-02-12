@@ -137,14 +137,11 @@ export async function PUT(req: Request) {
           const contract = userContract.contract;
 
           // Count completed user contracts for this contract in the current cycle
-          // We define a cycle by looking at contracts completed after the last cooldown period ended
-          const cycleStartTime = contract.cooldownUntil || new Date(0);
-
           const completedCount = await tx.userContract.count({
             where: {
               contractId: contract.id,
               status: 'COMPLETED',
-              completedAt: { gt: cycleStartTime }
+              cycleNumber: contract.currentCycle
             }
           });
 
@@ -152,7 +149,7 @@ export async function PUT(req: Request) {
             where: {
               contractId: contract.id,
               status: 'ACTIVE',
-              startedAt: { gt: cycleStartTime }
+              cycleNumber: contract.currentCycle
             }
           });
 
@@ -164,7 +161,8 @@ export async function PUT(req: Request) {
             await tx.contract.update({
               where: { id: contract.id },
               data: {
-                cooldownUntil: new Date(Date.now() + cooldownHours * 60 * 60 * 1000)
+                cooldownUntil: new Date(Date.now() + cooldownHours * 60 * 60 * 1000),
+                currentCycle: { increment: 1 }
               }
             });
           }
