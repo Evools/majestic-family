@@ -1,18 +1,30 @@
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { ArrowRight, CheckCircle, Clock, Coins, Crown, Flame, Target, TrendingUp, Users, Zap } from 'lucide-react';
+import { prisma } from '@/lib/prisma';
+import { ArrowRight, CheckCircle, Clock, Coins, Crown, Flame, Target, TrendingUp, Zap } from 'lucide-react';
 import { getServerSession } from 'next-auth';
 
 export default async function Dashboard() {
   const session = await getServerSession(authOptions);
+  
+  // Fetch user data to get firstName
+  const user = session?.user?.email 
+    ? await prisma.user.findUnique({
+        where: { email: session.user.email },
+        select: { firstName: true, name: true }
+      })
+    : null;
+
+  // Use firstName if available, otherwise fall back to Discord name
+  const displayName = user?.firstName || session?.user?.name || 'Гость';
 
   return (
     <div className="space-y-8">
       {/* Welcome Section */}
       <div className="flex flex-col md:flex-row items-end justify-between gap-4">
         <div>
-          <h1 className="text-4xl font-bold text-white tracking-tight mb-2">Добро пожаловать, <span className="text-[#e81c5a]">{session?.user?.name}</span></h1>
+          <h1 className="text-4xl font-bold text-white tracking-tight mb-2">Добро пожаловать, <span className="text-[#e81c5a]">{displayName}</span></h1>
           <p className="text-gray-400">Сегодня отличный день для ведения бизнеса.</p>
         </div>
         <div className="flex gap-3">
@@ -119,9 +131,9 @@ export default async function Dashboard() {
       </div>
       
       {/* Activity and Garage */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 gap-6">
           {/* Activity Feed */}
-           <Card className="lg:col-span-2 bg-[#0a0a0a] border border-[#1f1f1f]">
+           <Card className="bg-[#0a0a0a] border border-[#1f1f1f]">
                 <CardContent className="p-6">
                     <div className="flex items-center justify-between mb-6">
                         <h3 className="text-lg font-bold text-white">Последняя активность</h3>
@@ -152,52 +164,6 @@ export default async function Dashboard() {
                             </div>
                         ))}
                     </div>
-                </CardContent>
-           </Card>
-
-
-           {/* Management Online */}
-           <Card className="bg-[#0a0a0a] border border-[#1f1f1f]">
-                <CardContent className="p-6">
-                    <div className="flex items-center justify-between mb-6">
-                        <h3 className="text-lg font-bold text-white">Руководство</h3>
-                        <Users className="w-5 h-5 text-gray-500" />
-                    </div>
-                    <div className="space-y-4">
-                        {[
-                            { name: "Reid Shelby", rank: "Leader", status: "online" },
-                            { name: "Arthur Shelby", rank: "Deputy", status: "online" },
-                            { name: "Polly Gray", rank: "Treasurer", status: "offline", lastSeen: "15м назад" },
-                            { name: "John Wick", rank: "Caporegime", status: "online" },
-                        ].map((member, i) => (
-                            <div key={i} className="flex items-center justify-between">
-                                <div className="flex items-center gap-3">
-                                    <div className="relative">
-                                        <div className="w-8 h-8 rounded-full bg-gray-800 flex items-center justify-center border border-white/10">
-                                            <span className="font-bold text-xs text-white">{member.name[0]}</span>
-                                        </div>
-                                        {member.status === 'online' && (
-                                            <div className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-green-500 border-2 border-[#0a0a0a] rounded-full" />
-                                        )}
-                                    </div>
-                                    <div>
-                                        <p className="text-sm font-bold text-white">{member.name}</p>
-                                        <p className="text-[10px] text-gray-500 uppercase tracking-wider">{member.rank}</p>
-                                    </div>
-                                </div>
-                                <div className="text-right">
-                                    {member.status === 'online' ? (
-                                        <span className="text-xs text-green-500 font-medium">В сети</span>
-                                    ) : (
-                                        <span className="text-xs text-gray-600">{member.lastSeen}</span>
-                                    )}
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                    <Button className="w-full mt-6 bg-white/5 hover:bg-white/10 text-white border border-white/10">
-                        Весь состав
-                    </Button>
                 </CardContent>
            </Card>
       </div>
