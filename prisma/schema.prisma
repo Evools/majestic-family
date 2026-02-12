@@ -125,6 +125,7 @@ model Contract {
   icon          String         @default("ClipboardList")
   level         Int            @default(1)
   isActive      Boolean        @default(true)
+  isFlexible    Boolean        @default(false)
   maxSlots      Int            @default(10)
   currentCycle  Int            @default(1)
   cooldownUntil DateTime?

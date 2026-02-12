@@ -12,7 +12,7 @@ export async function POST(req: Request) {
     }
 
     const body = await req.json();
-    const { userContractId, itemName, quantity, proof, comment } = body;
+    const { userContractId, itemName, quantity, proof, comment, participantIds } = body;
 
     if (!userContractId || !itemName || !quantity || !proof) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
@@ -43,7 +43,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Contract not found or not active" }, { status: 404 });
     }
 
-    // Create report and add creator as first participant in a transaction
+    // Create report and add participants in a transaction
     const report = await prisma.$transaction(async (tx) => {
       const newReport = await tx.report.create({
         data: {
@@ -57,14 +57,20 @@ export async function POST(req: Request) {
         },
       });
 
-      // Automatically add creator as first participant
-      await tx.reportParticipant.create({
-        data: {
-          reportId: newReport.id,
-          userId: user.id,
-          share: 0, // Will be calculated on approval
-        },
-      });
+      // Add participants (always include creator)
+      const uniqueParticipantIds = Array.from(new Set([user.id, ...(participantIds || [])]));
+
+      await Promise.all(
+        uniqueParticipantIds.map((pid) =>
+          tx.reportParticipant.create({
+            data: {
+              reportId: newReport.id,
+              userId: pid as string,
+              share: 0,
+            },
+          })
+        )
+      );
 
       return newReport;
     });

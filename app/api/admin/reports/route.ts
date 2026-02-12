@@ -112,6 +112,25 @@ export async function PUT(req: Request) {
           )
         );
 
+        // Update dashboard settings (Family Balance and Goal progress)
+        let dashboardSettings = await tx.dashboardSettings.findFirst();
+        if (!dashboardSettings) {
+          dashboardSettings = await tx.dashboardSettings.create({
+            data: {
+              familyBalance: familyShare,
+              goalCurrent: familyShare
+            }
+          });
+        } else {
+          await tx.dashboardSettings.update({
+            where: { id: dashboardSettings.id },
+            data: {
+              familyBalance: { increment: familyShare },
+              goalCurrent: (dashboardSettings.goalCurrent || 0) + familyShare
+            }
+          });
+        }
+
         // Update report
         const updatedReport = await tx.report.update({
           where: { id: reportId },

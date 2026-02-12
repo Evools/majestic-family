@@ -46,7 +46,20 @@ export async function GET() {
       });
       alreadyParticipated = !!participation;
 
-      return { ...c, cycleCount, alreadyParticipated };
+      const activeParticipants = await prisma.userContract.findMany({
+        where: {
+          contractId: c.id,
+          status: 'ACTIVE',
+          cycleNumber: c.currentCycle
+        },
+        include: {
+          user: {
+            select: { id: true, name: true, firstName: true, lastName: true, image: true }
+          }
+        }
+      });
+
+      return { ...c, cycleCount, alreadyParticipated, activeParticipants };
     }));
 
     // Get user's contracts with report status
@@ -139,7 +152,7 @@ export async function POST(req: Request) {
       }
     });
 
-    if (cycleParticipantsCount >= contract.maxSlots) {
+    if (!contract.isFlexible && cycleParticipantsCount >= contract.maxSlots) {
       return NextResponse.json({
         error: "Contract is full",
         message: "Все доступные места на этот цикл заняты. Дождитесь завершения выполнения всеми участниками или следующего цикла."

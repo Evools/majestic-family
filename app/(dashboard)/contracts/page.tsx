@@ -4,7 +4,8 @@ import { ContractCard } from '@/components/contract-card';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Contract } from '@prisma/client';
-import { AlertCircle, Briefcase, Clock, History, Users } from 'lucide-react';
+import { AlertCircle, ArrowUpRight, Briefcase, Clock, History, Users } from 'lucide-react';
+import Link from 'next/link';
 import { useEffect, useState } from 'react';
 
 type UserContractWithContract = {
@@ -17,7 +18,11 @@ type UserContractWithContract = {
   reports: { status: string; id: string }[];
 };
 
-type GlobalContract = Contract & { cycleCount: number; alreadyParticipated: boolean };
+type GlobalContract = Contract & { 
+  cycleCount: number; 
+  alreadyParticipated: boolean;
+  activeParticipants: { user: { id: string; name: string; firstName: string; lastName: string; image: string | null } }[];
+};
 
 export default function ContractsPage() {
   const [contracts, setContracts] = useState<GlobalContract[]>([]);
@@ -153,34 +158,59 @@ export default function ContractsPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {activeContracts.map((uc) => {
               const isCancelling = cancellingContract === uc.id;
+              const hasReport = uc.reports.length > 0;
               
               return (
-                <Card key={uc.id} className="group relative overflow-hidden bg-[#0a0a0a] border-green-500/10 hover:border-green-500/30 transition-all duration-300">
-                  <div className="absolute top-0 left-0 w-1 h-full bg-green-500/50" />
+                <Card key={uc.id} className="group relative overflow-hidden bg-[#0a0a0a] border-white/5 hover:border-green-500/20 transition-all duration-500 shadow-2xl">
+                  {/* Glowing background effect */}
+                  <div className="absolute -top-24 -right-24 w-48 h-48 bg-green-500/5 blur-[80px] group-hover:bg-green-500/10 transition-colors duration-500" />
+                  
+                  {/* Status Bar */}
+                  <div className={`absolute top-0 left-0 w-full h-0.5 ${hasReport ? 'bg-blue-500/50' : 'bg-green-500/50'}`} />
+                  
                   <CardContent className="p-6">
                     <div className="flex items-center justify-between mb-6">
-                      <div className="flex items-center gap-2 px-3 py-1 rounded-md bg-green-500/5 border border-green-500/10">
-                        <div className={`w-1.5 h-1.5 rounded-full ${uc.reports.length > 0 ? 'bg-green-500 animate-pulse' : 'bg-green-500'}`} />
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-green-500/80">
-                          {uc.reports.length > 0 ? 'Отчет отправлен' : 'В процессе'}
+                      <div className="flex items-center gap-2">
+                        <div className={`flex items-center gap-2 px-2.5 py-1 rounded-full border text-[9px] font-bold uppercase tracking-widest ${
+                          hasReport 
+                            ? 'bg-blue-500/5 border-blue-500/20 text-blue-500' 
+                            : 'bg-green-500/5 border-green-500/20 text-green-500'
+                        }`}>
+                          <div className={`w-1 h-1 rounded-full ${hasReport ? 'bg-blue-500' : 'bg-green-500 animate-pulse'}`} />
+                          {hasReport ? 'Отчет на проверке' : 'Миссия Активна'}
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-center gap-1.5 text-gray-600">
+                        <Clock className="w-3 h-3" />
+                        <span className="text-[10px] font-bold uppercase tracking-widest">
+                          {new Date(uc.startedAt).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}
                         </span>
                       </div>
-                      <span className="text-[10px] font-medium text-gray-600 uppercase tracking-wider px-2 py-0.5 bg-white/5 rounded border border-white/5">
-                        {new Date(uc.startedAt).toLocaleDateString('ru-RU')}
-                      </span>
                     </div>
 
-                    <ContractCard contract={uc.contract} />
-                    
-                    <div className="mt-6 pt-4 border-t border-white/5">
-                      <Button
-                        variant="ghost"
-                        className="w-full h-9 text-[10px] font-bold uppercase tracking-widest text-red-500/40 hover:text-red-500 hover:bg-red-500/5"
-                        onClick={() => setConfirmCancelId(uc.id)}
-                        disabled={isCancelling}
-                      >
-                        {isCancelling ? 'Разрыв...' : 'Отказаться'}
-                      </Button>
+                    <div className="space-y-4">
+                      <ContractCard contract={uc.contract} />
+                      
+                      <div className="grid grid-cols-2 gap-3 pt-4">
+                        <Link href="/report" className="contents">
+                          <Button 
+                            className="bg-white/5 hover:bg-white/10 border border-white/5 text-[10px] font-bold uppercase tracking-widest h-10 group/btn transition-all duration-300"
+                          >
+                            <span className="flex-1 text-center">Сдать отчет</span>
+                            <ArrowUpRight className="w-3 h-3 ml-2 text-gray-500 group-hover/btn:text-white group-hover/btn:translate-x-0.5 group-hover/btn:-translate-y-0.5 transition-all" />
+                          </Button>
+                        </Link>
+                        
+                        <Button
+                          variant="ghost"
+                          className="h-10 text-[10px] font-bold uppercase tracking-widest text-red-500/40 hover:text-red-500 hover:bg-red-500/5 border border-transparent hover:border-red-500/10"
+                          onClick={() => setConfirmCancelId(uc.id)}
+                          disabled={isCancelling}
+                        >
+                          {isCancelling ? '...' : 'Отмена'}
+                        </Button>
+                      </div>
                     </div>
                   </CardContent>
                 </Card>
@@ -219,22 +249,55 @@ export default function ContractsPage() {
                 <Card key={contract.id} className={`group relative h-full bg-[#0a0a0a] border-[#1f1f1f] hover:border-[#e81c5a]/20 transition-all duration-300 ${isActive || cooldown || isFull || alreadyParticipated ? 'opacity-60 grayscale-[0.5]' : ''}`}>
                   <CardContent className="p-6 flex flex-col h-full">
                     {/* Slots Progress */}
-                    <div className="mb-6 space-y-1.5">
+                    <div className="mb-6 space-y-2.5">
                        <div className="flex items-center justify-between text-[9px] font-bold uppercase tracking-widest leading-none">
                           <div className="flex items-center gap-1.5 text-gray-500">
                             <Users className="w-3 h-3" />
-                            <span>Заполнено</span>
+                            <span>{contract.isFlexible ? 'Активно' : 'Заполнено'}</span>
                           </div>
-                          <span className={isFull ? 'text-[#e81c5a]' : 'text-gray-400'}>
-                            {contract.cycleCount} / {contract.maxSlots}
+                          <span className={!contract.isFlexible && isFull ? 'text-[#e81c5a]' : 'text-gray-400'}>
+                            {contract.isFlexible ? contract.cycleCount : `${contract.cycleCount} / ${contract.maxSlots}`}
                           </span>
                        </div>
-                       <div className="h-1 w-full bg-white/5 rounded-full overflow-hidden">
-                          <div 
-                            className={`h-full transition-all duration-1000 ${isFull ? 'bg-[#e81c5a]' : 'bg-gray-700'}`}
-                            style={{ width: `${Math.min(progress, 100)}%` }}
-                          />
-                       </div>
+                       
+                       {!contract.isFlexible ? (
+                         <div className="h-1 w-full bg-white/5 rounded-full overflow-hidden">
+                            <div 
+                              className={`h-full transition-all duration-1000 ${isFull ? 'bg-[#e81c5a]' : 'bg-gray-700'}`}
+                              style={{ width: `${Math.min(progress, 100)}%` }}
+                            />
+                         </div>
+                       ) : (
+                         <div className="h-1 w-full bg-white/5 rounded-full overflow-hidden">
+                            <div className="h-full bg-cyan-500/50 w-full animate-pulse" />
+                         </div>
+                       )}
+
+                       {/* Active Participants Avatars/Names */}
+                       {contract.activeParticipants && contract.activeParticipants.length > 0 && (
+                         <div className="flex flex-wrap gap-1 mt-2">
+                           {contract.activeParticipants.map((p) => (
+                             <div 
+                               key={p.user.id} 
+                               className="pl-1 pr-2 py-0.5 rounded-full bg-white/5 border border-white/5 text-[8px] text-gray-500 font-bold uppercase tracking-widest flex items-center gap-1.5 hover:border-[#e81c5a]/30 transition-colors"
+                               title={p.user.firstName || p.user.name}
+                             >
+                               {p.user.image ? (
+                                 <img 
+                                   src={p.user.image} 
+                                   alt="" 
+                                   className="w-3.5 h-3.5 rounded-full object-cover border border-white/10"
+                                 />
+                               ) : (
+                                 <div className="w-1.5 h-1.5 rounded-full bg-green-500 shadow-[0_0_5px_rgba(34,197,94,0.5)]" />
+                               )}
+                               <span className="max-w-[60px] truncate">
+                                 {p.user.firstName || p.user.name}
+                               </span>
+                             </div>
+                           ))}
+                         </div>
+                       )}
                     </div>
 
                     <ContractCard contract={contract} />

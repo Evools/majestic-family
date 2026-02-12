@@ -2,6 +2,7 @@
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Contract } from '@prisma/client';
 import { Edit2, Plus, Trash2 } from 'lucide-react';
@@ -22,6 +23,7 @@ export default function AdminContractsPage() {
     level: '1',
     icon: 'ClipboardList',
     maxSlots: '1',
+    isFlexible: false,
   });
 
   useEffect(() => {
@@ -84,13 +86,14 @@ export default function AdminContractsPage() {
       level: contract.level.toString(),
       icon: contract.icon,
       maxSlots: contract.maxSlots?.toString() || '1',
+      isFlexible: contract.isFlexible,
     });
     setEditingId(contract.id);
     setIsCreating(true);
   };
 
   const resetForm = () => {
-    setFormData({ title: '', description: '', reward: '0', reputation: '0', level: '1', icon: 'ClipboardList', maxSlots: '1' });
+    setFormData({ title: '', description: '', reward: '0', reputation: '0', level: '1', icon: 'ClipboardList', maxSlots: '1', isFlexible: false });
     setEditingId(null);
     setIsCreating(false);
   };
@@ -176,14 +179,24 @@ export default function AdminContractsPage() {
                             />
                         </div>
                         <div className="space-y-2">
-                            <label className="text-xs font-medium text-gray-400 uppercase tracking-wide">Нужно людей</label>
                             <Input 
                                 type="number"
                                 placeholder="10" 
                                 value={formData.maxSlots}
                                 onChange={e => setFormData({...formData, maxSlots: e.target.value})}
-                                className="bg-[#0f0f0f] border-[#1f1f1f] text-white"
+                                disabled={formData.isFlexible}
+                                className="bg-[#0f0f0f] border-[#1f1f1f] text-white disabled:opacity-30"
                             />
+                        </div>
+                        <div className="flex items-center gap-3 self-end h-10 px-1">
+                            <Checkbox 
+                                id="isFlexible" 
+                                checked={formData.isFlexible}
+                                onChange={(e) => setFormData({...formData, isFlexible: e.target.checked})}
+                            />
+                            <label htmlFor="isFlexible" className="text-xs font-bold text-gray-400 uppercase tracking-widest cursor-pointer select-none">
+                                Без лимита мест
+                            </label>
                         </div>
                     </div>
                     <div className="flex justify-end gap-2 pt-2">
@@ -213,7 +226,11 @@ export default function AdminContractsPage() {
                     <h3 className="text-xl font-bold text-white mb-2">{contract.title}</h3>
                     <p className="text-sm text-gray-500 mb-4">{contract.description || 'Нет описания'}</p>
                     <div className="flex items-center gap-2 text-[10px] font-bold text-gray-400 uppercase tracking-wider">
-                        <span>Ёмкость: {contract.maxSlots} чел.</span>
+                        {contract.isFlexible ? (
+                            <span className="text-cyan-500">Без лимита участников</span>
+                        ) : (
+                            <span>Ёмкость: {contract.maxSlots} чел.</span>
+                        )}
                     </div>
                 </CardContent>
              </Card>

@@ -24,6 +24,14 @@ type ReportForm = {
   quantity: string;
   proof: string;
   comment: string;
+  participantIds: string[];
+};
+
+type Member = {
+  id: string;
+  name: string;
+  firstName: string;
+  lastName: string;
 };
 
 export default function ReportPage() {
@@ -33,10 +41,23 @@ export default function ReportPage() {
     const [loading, setLoading] = useState(true);
     const [reportForms, setReportForms] = useState<ReportForm[]>([]);
     const [successCount, setSuccessCount] = useState(0);
+    const [members, setMembers] = useState<Member[]>([]);
   
     useEffect(() => {
       fetchActiveContracts();
+      fetchMembers();
     }, []);
+
+    const fetchMembers = async () => {
+        try {
+            const res = await fetch('/api/members');
+            if (res.ok) {
+                setMembers(await res.json());
+            }
+        } catch (error) {
+            console.error('Failed to fetch members:', error);
+        }
+    };
 
     const fetchActiveContracts = async () => {
       try {
@@ -51,6 +72,7 @@ export default function ReportPage() {
             quantity: '',
             proof: '',
             comment: '',
+            participantIds: [],
           })) || []);
         }
       } catch (error) {
@@ -100,6 +122,7 @@ export default function ReportPage() {
                 quantity: form.quantity,
                 proof: form.proof,
                 comment: form.comment,
+                participantIds: form.participantIds,
               }),
             });
 
@@ -210,7 +233,7 @@ export default function ReportPage() {
                       </Button>
                     </div>
 
-                    {/* Form Fields */}
+                      {/* Form Fields */}
                     <div className="space-y-4">
                       <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
@@ -253,6 +276,61 @@ export default function ReportPage() {
                           value={form.comment}
                           onChange={(e) => updateForm(index, 'comment', e.target.value)}
                         />
+                      </div>
+
+                      <div className="space-y-3 pt-2 border-t border-white/5">
+                        <label className="text-xs font-bold text-gray-500 uppercase tracking-widest flex items-center gap-2">
+                           <Star className="w-3 h-3" />
+                           Доп. участники
+                        </label>
+                        
+                        <div className="flex flex-wrap gap-2 mb-2">
+                            {/* Always show self */}
+                            <div className="px-2 py-1 rounded bg-blue-500/10 border border-blue-500/20 text-[10px] text-blue-500 font-bold uppercase tracking-wider">
+                                {session?.user?.name} (Вы)
+                            </div>
+                            
+                            {form.participantIds.map(pid => {
+                                const member = members.find(m => m.id === pid);
+                                return (
+                                    <div key={pid} className="px-2 py-1 rounded bg-white/5 border border-white/10 text-[10px] text-gray-400 font-bold uppercase tracking-wider flex items-center gap-2">
+                                        {member?.firstName || member?.name}
+                                        <button 
+                                            onClick={() => {
+                                                const updatedIds = form.participantIds.filter(id => id !== pid);
+                                                updateForm(index, 'participantIds', updatedIds as any);
+                                            }}
+                                            className="text-red-500 hover:text-red-400"
+                                        >
+                                            <Trash2 className="w-3 h-3" />
+                                        </button>
+                                    </div>
+                                );
+                            })}
+                        </div>
+
+                        <select 
+                            className="w-full h-10 bg-[#0a0a0a] border border-[#1f1f1f] rounded-lg px-3 text-xs text-gray-400 focus:outline-none focus:border-blue-500/50"
+                            onChange={(e) => {
+                                if (!e.target.value) return;
+                                if (e.target.value === (session?.user as any)?.id) return;
+                                if (form.participantIds.includes(e.target.value)) return;
+                                
+                                const updatedIds = [...form.participantIds, e.target.value];
+                                updateForm(index, 'participantIds', updatedIds as any);
+                                e.target.value = '';
+                            }}
+                        >
+                            <option value="">Добавить участника...</option>
+                            {members
+                                .filter(m => m.id !== (session?.user as any)?.id && !form.participantIds.includes(m.id))
+                                .map(m => (
+                                    <option key={m.id} value={m.id}>
+                                        {m.firstName ? `${m.firstName} (${m.name})` : m.name}
+                                    </option>
+                                ))
+                            }
+                        </select>
                       </div>
                     </div>
                   </CardContent>
