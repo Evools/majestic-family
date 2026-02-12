@@ -4,12 +4,20 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Report } from '@prisma/client';
-import { Check, Clock, ExternalLink, Users, X } from 'lucide-react';
+import { Check, Clock, DollarSign, ExternalLink, Star, Users, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 // Extend Report type to include relations
 type ReportWithRelations = Report & {
   user: { name: string | null; image: string | null; firstName: string | null; lastName: string | null };
+  userContract: {
+    contract: {
+      id: string;
+      title: string;
+      reward: number;
+      reputation: number;
+    };
+  } | null;
   participants: Array<{
     id: string;
     user: {
@@ -28,7 +36,7 @@ export default function AdminReportsPage() {
   const [processingId, setProcessingId] = useState<string | null>(null);
   
   // Action State
-  const [actionValue, setActionValue] = useState<string>(''); // For approval value or rejection reason
+  const [rejectionReason, setRejectionReason] = useState<string>('');
   const [activeAction, setActiveAction] = useState<{ id: string; type: 'approve' | 'reject' } | null>(null);
 
   useEffect(() => {
@@ -51,12 +59,18 @@ export default function AdminReportsPage() {
   const handleAction = async () => {
     if (!activeAction) return;
     
+    const report = reports.find(r => r.id === activeAction.id);
+    if (!report) return;
+
+    // For approval, use contract reward
+    const contractReward = report.userContract?.contract?.reward || 0;
+    
     setProcessingId(activeAction.id);
     try {
       const body = {
         reportId: activeAction.id,
         action: activeAction.type,
-        ...(activeAction.type === 'approve' ? { value: actionValue } : { rejectionReason: actionValue })
+        ...(activeAction.type === 'approve' ? { value: contractReward.toString() } : { rejectionReason })
       };
 
       const res = await fetch('/api/admin/reports', {
@@ -69,7 +83,7 @@ export default function AdminReportsPage() {
         // Remove from list or update status
         setReports(prev => prev.filter(r => r.id !== activeAction.id));
         setActiveAction(null);
-        setActionValue('');
+        setRejectionReason('');
       } else {
         const errorData = await res.json();
         alert(errorData.error || 'Failed to process report');
@@ -113,16 +127,21 @@ export default function AdminReportsPage() {
         <div className="grid gap-4">
           {reports.map((report) => {
             const participantCount = report.participants.length;
-            const totalValue = parseFloat(actionValue) || 0;
-            const userShare = totalValue * 0.6;
+            // Get reward from contract (this is the total value)
+            const contractReward = report.userContract?.contract?.reward || 0;
+            const totalValue = contractReward;
+            // Family gets 40% of total
             const familyShare = totalValue * 0.4;
+            // Users get 60% of total
+            const userShare = totalValue * 0.6;
+            // Each participant gets equal share
             const individualShare = participantCount > 0 ? userShare / participantCount : 0;
 
             return (
               <Card key={report.id} className="bg-[#0a0a0a] border border-[#1f1f1f]">
                 <CardContent className="p-6">
                   <div className="flex flex-col gap-6">
-                    {/* Header: User Info + Participants */}
+                    {/* Header: User Info + Contract */}
                     <div className="flex items-start justify-between">
                       <div className="flex items-start gap-4">
                         {report.user.image ? (
@@ -139,37 +158,51 @@ export default function AdminReportsPage() {
                         </div>
                       </div>
 
-                      {/* Participants Badge */}
-                      <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-blue-500/10 border border-blue-500/20">
-                        <Users className="w-4 h-4 text-blue-500" />
-                        <span className="text-sm font-bold text-blue-500">{participantCount} участник{participantCount > 1 ? 'а' : ''}</span>
-                      </div>
+                      {/* Contract Badge */}
+                      {report.userContract?.contract && (
+                        <div className="flex flex-col items-end gap-1">
+                          <div className="px-3 py-1.5 rounded-lg bg-green-500/10 border border-green-500/20">
+                            <span className="text-sm font-bold text-green-500">{report.userContract.contract.title}</span>
+                          </div>
+                          <div className="flex items-center gap-2 text-xs">
+                            <div className="flex items-center gap-1 text-green-500">
+                              <DollarSign className="w-3 h-3" />
+                              <span className="font-bold">${contractReward.toLocaleString()}</span>
+                            </div>
+                            <div className="flex items-center gap-1 text-yellow-500">
+                              <Star className="w-3 h-3" />
+                              <span className="font-bold">+{report.userContract.contract.reputation} XP</span>
+                            </div>
+                          </div>
+                        </div>
+                      )}
                     </div>
 
-                    {/* Participants List */}
+                    {/* Participants */}
                     {participantCount > 0 && (
-                      <div className="flex flex-wrap gap-2">
-                        {report.participants.map((participant) => (
-                          <div key={participant.id} className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/5 border border-white/10">
-                            {participant.user.image ? (
-                              <img src={participant.user.image} alt={getUserDisplayName(participant.user)} className="w-5 h-5 rounded-full" />
-                            ) : (
-                              <div className="w-5 h-5 rounded-full bg-gray-700" />
-                            )}
-                            <span className="text-xs text-gray-300">{getUserDisplayName(participant.user)}</span>
-                          </div>
-                        ))}
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2">
+                          <Users className="w-4 h-4 text-blue-500" />
+                          <span className="text-sm font-bold text-blue-500">{participantCount} участник{participantCount > 1 ? 'а' : ''}</span>
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                          {report.participants.map((participant) => (
+                            <div key={participant.id} className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/5 border border-white/10">
+                              {participant.user.image ? (
+                                <img src={participant.user.image} alt={getUserDisplayName(participant.user)} className="w-5 h-5 rounded-full" />
+                              ) : (
+                                <div className="w-5 h-5 rounded-full bg-gray-700" />
+                              )}
+                              <span className="text-xs text-gray-300">{getUserDisplayName(participant.user)}</span>
+                            </div>
+                          ))}
+                        </div>
                       </div>
                     )}
 
                     {/* Report Details */}
                     <div className="space-y-2">
-                      <div className="flex items-center gap-2">
-                          <span className="px-2 py-1 rounded bg-white/5 text-xs font-mono text-gray-300 border border-white/10 uppercase">
-                              {report.contractType}
-                          </span>
-                          <h3 className="text-white font-medium">{report.itemName} <span className="text-gray-500">x{report.quantity}</span></h3>
-                      </div>
+                      <h3 className="text-white font-medium">{report.itemName} <span className="text-gray-500">x{report.quantity}</span></h3>
                       
                       {report.comment && (
                           <p className="text-sm text-gray-400 bg-white/5 p-2 rounded border border-white/5">
@@ -188,73 +221,102 @@ export default function AdminReportsPage() {
                       </a>
                     </div>
 
+                    {/* Payment Distribution Preview */}
+                    {contractReward > 0 && (
+                      <div className="space-y-2 p-3 rounded-lg bg-white/5 border border-white/10">
+                        <p className="text-xs font-bold text-gray-400 uppercase tracking-wide">Автоматическое распределение:</p>
+                        <div className="space-y-1.5 text-sm">
+                          <div className="flex justify-between">
+                            <span className="text-gray-400">Награда контракта:</span>
+                            <span className="text-white font-bold">${totalValue.toLocaleString()}</span>
+                          </div>
+                          <div className="h-px bg-white/10 my-1" />
+                          <div className="flex justify-between">
+                            <span className="text-gray-400">Семье (40%):</span>
+                            <span className="text-yellow-500 font-bold">${familyShare.toLocaleString()}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-gray-400">Участникам (60%):</span>
+                            <span className="text-green-500 font-bold">${userShare.toLocaleString()}</span>
+                          </div>
+                          <div className="h-px bg-white/10 my-2" />
+                          <div className="flex justify-between">
+                            <span className="text-gray-400">Каждому участнику:</span>
+                            <span className="text-blue-500 font-bold">${individualShare.toLocaleString()}</span>
+                          </div>
+                          {participantCount > 0 && (
+                            <p className="text-[10px] text-gray-500 mt-1">
+                              ${userShare.toLocaleString()} ÷ {participantCount} участник{participantCount > 1 ? 'а' : ''}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
                     {/* Actions */}
                     <div className="flex flex-col gap-2">
                       {activeAction?.id === report.id ? (
                           <div className="space-y-3 animate-in fade-in zoom-in-95 bg-[#1a1a1a] p-4 rounded-lg border border-[#2f2f2f]">
-                              <p className="text-xs font-bold text-white mb-1">
-                                  {activeAction.type === 'approve' ? 'Сумма выплаты ($):' : 'Причина отказа:'}
-                              </p>
-                              <Input 
-                                  autoFocus
-                                  type={activeAction.type === 'approve' ? "number" : "text"} 
-                                  placeholder={activeAction.type === 'approve' ? "Example: 15000" : "Incorrect proof..."}
-                                  className="h-9 text-sm bg-[#0a0a0a]"
-                                  value={actionValue}
-                                  onChange={(e) => setActionValue(e.target.value)}
-                              />
-                              {activeAction.type === 'approve' && actionValue && !isNaN(totalValue) && totalValue > 0 && (
-                                  <div className="space-y-2 p-3 rounded-lg bg-white/5 border border-white/10">
-                                      <p className="text-xs font-bold text-gray-400 uppercase tracking-wide">Распределение:</p>
-                                      <div className="space-y-1.5 text-sm">
-                                          <div className="flex justify-between">
-                                              <span className="text-gray-400">Семье (40%):</span>
-                                              <span className="text-yellow-500 font-bold">${familyShare.toLocaleString()}</span>
-                                          </div>
-                                          <div className="flex justify-between">
-                                              <span className="text-gray-400">Участникам (60%):</span>
-                                              <span className="text-green-500 font-bold">${userShare.toLocaleString()}</span>
-                                          </div>
-                                          <div className="h-px bg-white/10 my-2" />
-                                          <div className="flex justify-between">
-                                              <span className="text-gray-400">Каждому участнику:</span>
-                                              <span className="text-blue-500 font-bold">${individualShare.toLocaleString()}</span>
-                                          </div>
-                                          <p className="text-[10px] text-gray-500 mt-1">
-                                              ${userShare.toLocaleString()} ÷ {participantCount} участник{participantCount > 1 ? 'а' : ''}
-                                          </p>
-                                      </div>
-                                  </div>
+                              {activeAction.type === 'reject' ? (
+                                <>
+                                  <p className="text-xs font-bold text-white mb-1">Причина отказа:</p>
+                                  <Input 
+                                      autoFocus
+                                      type="text" 
+                                      placeholder="Incorrect proof..."
+                                      className="h-9 text-sm bg-[#0a0a0a]"
+                                      value={rejectionReason}
+                                      onChange={(e) => setRejectionReason(e.target.value)}
+                                  />
+                                </>
+                              ) : (
+                                <p className="text-sm text-green-500">
+                                  Подтвердите одобрение отчета. Средства будут распределены автоматически согласно контракту.
+                                </p>
                               )}
                               <div className="flex gap-2 pt-1">
-                                  <Button size="sm" variant="ghost" className="h-8 w-full text-xs" onClick={() => setActiveAction(null)}>Отмена</Button>
+                                  <Button 
+                                    size="sm" 
+                                    variant="outline" 
+                                    className="h-8 w-full text-xs" 
+                                    onClick={() => {
+                                      setActiveAction(null);
+                                      setRejectionReason('');
+                                    }}
+                                  >
+                                    Отмена
+                                  </Button>
                                   <Button 
                                       size="sm" 
-                                      className={`h-8 w-full text-xs ${activeAction.type === 'approve' ? 'bg-green-600 hover:bg-green-700' : 'bg-red-600 hover:bg-red-700'}`}
+                                      className={`h-8 w-full text-xs font-medium ${
+                                        activeAction.type === 'approve' 
+                                          ? 'bg-green-600 hover:bg-green-700 text-white' 
+                                          : 'bg-red-600 hover:bg-red-700 text-white'
+                                      }`}
                                       onClick={handleAction}
-                                      disabled={!actionValue || processingId === report.id}
+                                      disabled={(activeAction.type === 'reject' && !rejectionReason) || processingId === report.id}
                                   >
-                                      Подтвердить
+                                      {processingId === report.id ? 'Обработка...' : 'Подтвердить'}
                                   </Button>
                               </div>
                           </div>
                       ) : (
                           <div className="flex gap-2">
                               <Button 
-                                  className="bg-green-600 hover:bg-green-700 text-white h-9 flex-1"
+                                  className="bg-green-600 hover:bg-green-700 text-white h-9 flex-1 font-medium"
                                   onClick={() => {
                                       setActiveAction({ id: report.id, type: 'approve' });
-                                      setActionValue('');
+                                      setRejectionReason('');
                                   }}
                               >
                                   <Check className="w-4 h-4 mr-2" /> Одобрить
                               </Button>
                                <Button 
-                                  variant="destructive" 
-                                  className="bg-red-900/50 hover:bg-red-900 text-red-200 border border-red-900 h-9 flex-1"
+                                  variant="outline" 
+                                  className="bg-red-500/10 hover:bg-red-500/20 text-red-400 border-red-500/30 hover:border-red-500/50 h-9 flex-1 font-medium"
                                   onClick={() => {
                                       setActiveAction({ id: report.id, type: 'reject' });
-                                      setActionValue('');
+                                      setRejectionReason('');
                                   }}
                               >
                                   <X className="w-4 h-4 mr-2" /> Отклонить

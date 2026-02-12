@@ -18,6 +18,11 @@ export async function GET(req: Request) {
         user: {
           select: { name: true, image: true, firstName: true, lastName: true },
         },
+        userContract: {
+          include: {
+            contract: true,
+          },
+        },
         participants: {
           include: {
             user: {
@@ -80,6 +85,23 @@ export async function PUT(req: Request) {
 
       // Update report and create participant shares in a transaction
       const report = await prisma.$transaction(async (tx) => {
+        // Get the report to find userContractId
+        const existingReport = await tx.report.findUnique({
+          where: { id: reportId },
+          select: { userContractId: true }
+        });
+
+        // If there's a userContract, mark it as COMPLETED
+        if (existingReport?.userContractId) {
+          await tx.userContract.update({
+            where: { id: existingReport.userContractId },
+            data: {
+              status: 'COMPLETED',
+              completedAt: new Date(),
+            },
+          });
+        }
+
         // Update all participant shares
         await Promise.all(
           participants.map((participant) =>

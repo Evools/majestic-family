@@ -2,10 +2,9 @@
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { CustomSelect } from '@/components/ui/custom-select';
 import { Input } from '@/components/ui/input';
 import { Contract } from '@prisma/client';
-import { AlertCircle, CheckCircle2, DollarSign, Star } from 'lucide-react';
+import { AlertCircle, CheckCircle2, DollarSign, Star, Trash2 } from 'lucide-react';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 
@@ -19,13 +18,21 @@ type UserContractWithContract = {
   contract: Contract;
 };
 
+type ReportForm = {
+  userContractId: string;
+  itemName: string;
+  quantity: string;
+  proof: string;
+  comment: string;
+};
+
 export default function ReportPage() {
     const { data: session } = useSession();
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const [success, setSuccess] = useState(false);
     const [activeContracts, setActiveContracts] = useState<UserContractWithContract[]>([]);
-    const [selectedContractId, setSelectedContractId] = useState('');
     const [loading, setLoading] = useState(true);
+    const [reportForms, setReportForms] = useState<ReportForm[]>([]);
+    const [successCount, setSuccessCount] = useState(0);
   
     useEffect(() => {
       fetchActiveContracts();
@@ -37,10 +44,14 @@ export default function ReportPage() {
         if (res.ok) {
           const data = await res.json();
           setActiveContracts(data.active || []);
-          // Auto-select if only one active contract
-          if (data.active?.length === 1) {
-            setSelectedContractId(data.active[0].id);
-          }
+          // Initialize forms for all active contracts
+          setReportForms(data.active?.map((uc: UserContractWithContract) => ({
+            userContractId: uc.id,
+            itemName: '',
+            quantity: '',
+            proof: '',
+            comment: '',
+          })) || []);
         }
       } catch (error) {
         console.error('Failed to fetch active contracts:', error);
@@ -49,53 +60,77 @@ export default function ReportPage() {
       }
     };
 
-    const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-      e.preventDefault();
+    const updateForm = (index: number, field: keyof ReportForm, value: string) => {
+      setReportForms(prev => {
+        const updated = [...prev];
+        updated[index] = { ...updated[index], [field]: value };
+        return updated;
+      });
+    };
+
+    const removeForm = (index: number) => {
+      setReportForms(prev => prev.filter((_, i) => i !== index));
+      setActiveContracts(prev => prev.filter((_, i) => i !== index));
+    };
+
+    const handleSubmitAll = async () => {
+      // Filter out empty forms
+      const filledForms = reportForms.filter(form => 
+        form.itemName && form.quantity && form.proof
+      );
+
+      if (filledForms.length === 0) {
+        alert('Заполните хотя бы один отчет');
+        return;
+      }
+
       setIsSubmitting(true);
-      
-      const formData = new FormData(e.currentTarget);
-      const data = {
-        userContractId: selectedContractId,
-        itemName: formData.get('itemName'),
-        quantity: formData.get('quantity'),
-        proof: formData.get('proof'),
-        comment: formData.get('comment'),
-      };
+      let successfulSubmissions = 0;
 
       try {
-        const response = await fetch('/api/report', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(data),
-        });
+        // Submit each report
+        for (const form of filledForms) {
+          try {
+            const response = await fetch('/api/report', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                userContractId: form.userContractId,
+                itemName: form.itemName,
+                quantity: form.quantity,
+                proof: form.proof,
+                comment: form.comment,
+              }),
+            });
 
-        if (response.ok) {
-          setSuccess(true);
-          // Reset form
-          e.currentTarget.reset();
-          setSelectedContractId('');
-          // Refresh active contracts
-          await fetchActiveContracts();
-        } else {
-          const error = await response.json();
-          alert(error.error || 'Submission failed');
+            if (response.ok) {
+              successfulSubmissions++;
+            }
+          } catch (error) {
+            console.error('Error submitting report:', error);
+          }
         }
-      } catch (error) {
-        console.error('Error submitting report:', error);
-        alert('Error submitting report');
+
+        setSuccessCount(successfulSubmissions);
+        
+        // Refresh and reset
+        await fetchActiveContracts();
+        
+        // Auto-hide success after 4 seconds
+        setTimeout(() => {
+          setSuccessCount(0);
+        }, 4000);
       } finally {
         setIsSubmitting(false);
       }
     };
-
-    const selectedContract = activeContracts.find(uc => uc.id === selectedContractId);
 
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-4 mb-8">
         <div>
             <h1 className="text-3xl font-bold text-white">Новый отчет</h1>
-            <p className="text-gray-400">Заполните данные о выполненном контракте.</p>
+            <p className="text-gray-400">Заполните данные о выполненных контрактах.</p>
         </div>
       </div>
 
@@ -119,134 +154,127 @@ export default function ReportPage() {
           </CardContent>
         </Card>
       ) : (
-        <Card>
-          {success ? (
-              <div className="p-12 text-center flex flex-col items-center">
-                  <CheckCircle2 className="w-16 h-16 text-green-500 mb-4" />
-                  <h3 className="text-xl font-bold text-white">Отчет отправлен успешно</h3>
-                  <p className="text-gray-400 mt-2 mb-6">Средства будут зачислены после проверки модератором.</p>
-                  <div className="flex gap-3">
-                    <Button onClick={() => {
-                      setSuccess(false);
-                      // Auto-select if only one active contract remains
-                      if (activeContracts.length === 1) {
-                        setSelectedContractId(activeContracts[0].id);
-                      }
-                    }}>
-                      {activeContracts.length > 0 ? 'Отправить еще один' : 'Закрыть'}
-                    </Button>
-                    <Link href="/contracts">
-                      <Button variant="outline">К контрактам</Button>
-                    </Link>
-                  </div>
+        <>
+          {/* Success Toast */}
+          {successCount > 0 && (
+            <div className="p-4 rounded-lg bg-green-500/10 border border-green-500/20 flex items-center gap-3">
+              <CheckCircle2 className="w-5 h-5 text-green-500 shrink-0" />
+              <div className="flex-1">
+                <p className="text-sm font-medium text-green-500">
+                  {successCount} {successCount === 1 ? 'отчет' : 'отчета'} успешно отправлен{successCount > 1 ? 'о' : ''}!
+                </p>
+                <p className="text-xs text-gray-400 mt-0.5">Средства будут зачислены после проверки модератором.</p>
               </div>
-          ) : (
-              <CardContent className="p-8">
-              <form onSubmit={handleSubmit} className="space-y-6">
-                  {/* Contract Selection */}
-                  <div className="space-y-2">
-                      <label className="text-xs font-medium text-gray-400 uppercase tracking-wide">Выберите контракт</label>
-                      <CustomSelect 
-                          options={activeContracts.map(uc => ({
-                            value: uc.id,
-                            label: uc.contract.title,
-                          }))}
-                          value={selectedContractId}
-                          onChange={setSelectedContractId}
-                          placeholder="Выберите активный контракт"
-                      />
-                  </div>
+            </div>
+          )}
 
-                  {/* Contract Details */}
-                  {selectedContract && (
-                    <Card className="bg-blue-500/5 border-blue-500/20">
-                      <CardContent className="p-4">
-                        <div className="flex items-start justify-between">
-                          <div className="flex-1">
-                            <h4 className="font-bold text-white mb-1">{selectedContract.contract.title}</h4>
-                            {selectedContract.contract.description && (
-                              <p className="text-sm text-gray-400 mb-2">{selectedContract.contract.description}</p>
-                            )}
-                            <div className="flex items-center gap-4 text-sm">
-                              <div className="flex items-center gap-1 text-green-500">
-                                <DollarSign className="w-4 h-4" />
-                                <span className="font-bold">${selectedContract.contract.reward.toLocaleString()}</span>
-                              </div>
-                              <div className="flex items-center gap-1 text-yellow-500">
-                                <Star className="w-4 h-4" />
-                                <span className="font-bold">+{selectedContract.contract.reputation} XP</span>
-                              </div>
-                            </div>
+          {/* Report Forms */}
+          <div className="space-y-4">
+            {activeContracts.map((uc, index) => {
+              const form = reportForms[index];
+              if (!form) return null;
+
+              return (
+                <Card key={uc.id} className="bg-[#0a0a0a] border-blue-500/20">
+                  <CardContent className="p-6">
+                    {/* Contract Header */}
+                    <div className="flex items-start justify-between mb-4 pb-4 border-b border-white/5">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-2">
+                          <h3 className="font-bold text-white text-lg">{uc.contract.title}</h3>
+                          <span className="px-2 py-0.5 rounded bg-blue-500/10 text-blue-500 text-xs font-bold border border-blue-500/20">
+                            LVL {uc.contract.level}
+                          </span>
+                        </div>
+                        {uc.contract.description && (
+                          <p className="text-sm text-gray-400 mb-2">{uc.contract.description}</p>
+                        )}
+                        <div className="flex items-center gap-4 text-sm">
+                          <div className="flex items-center gap-1 text-green-500">
+                            <DollarSign className="w-4 h-4" />
+                            <span className="font-bold">${uc.contract.reward.toLocaleString()}</span>
+                          </div>
+                          <div className="flex items-center gap-1 text-yellow-500">
+                            <Star className="w-4 h-4" />
+                            <span className="font-bold">+{uc.contract.reputation} XP</span>
                           </div>
                         </div>
-                      </CardContent>
-                    </Card>
-                  )}
-
-                  <div className="space-y-6">
-                      <div className="grid grid-cols-2 gap-6">
-                          <div className="col-span-2 md:col-span-1 space-y-2">
-                              <label className="text-xs font-medium text-gray-400 uppercase tracking-wide">Предмет</label>
-                              <Input 
-                                  name="itemName" 
-                                  placeholder="Например: Кабель" 
-                                  className="bg-[#0a0a0a] border-[#1f1f1f] text-white placeholder:text-gray-600 focus-visible:ring-[#e81c5a]/50" 
-                                  required 
-                              />
-                          </div>
-                          <div className="col-span-2 md:col-span-1 space-y-2">
-                               <label className="text-xs font-medium text-gray-400 uppercase tracking-wide">Количество</label>
-                              <Input 
-                                  name="quantity" 
-                                  type="number" 
-                                  placeholder="0" 
-                                  min="1"
-                                  className="bg-[#0a0a0a] border-[#1f1f1f] text-white placeholder:text-gray-600 focus-visible:ring-[#e81c5a]/50" 
-                                  required 
-                              />
-                          </div>
                       </div>
-                  </div>
-
-                  <div className="space-y-2">
-                      <label className="text-xs font-medium text-gray-400 uppercase tracking-wide">Доказательства</label>
-                      <Input 
-                          name="proof"
-                          placeholder="Ссылка на Imgur / YouTube" 
-                          className="bg-[#0a0a0a] border-[#1f1f1f] text-white placeholder:text-gray-600 focus-visible:ring-[#e81c5a]/50" 
-                          required
-                      />
-                      <p className="text-[10px] text-gray-500 flex items-center gap-1">
-                          <AlertCircle className="w-3 h-3" />
-                          Убедитесь, что ссылка доступна для просмотра.
-                      </p>
-                  </div>
-
-                  <div className="space-y-2">
-                      <label className="text-xs font-medium text-gray-400 uppercase tracking-wide">Комментарий</label>
-                      <textarea 
-                          name="comment"
-                          className="w-full min-h-[120px] bg-[#0a0a0a] border border-[#1f1f1f] rounded-lg p-3 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-[#e81c5a] focus:ring-1 focus:ring-[#e81c5a]/50 resize-y transition-all"
-                          placeholder="Дополнительные детали..."
-                      />
-                  </div>
-
-                  <div className="pt-4 flex justify-end gap-3 border-t border-white/5">
-                      <Link href="/contracts">
-                        <Button type="button" variant="ghost" className="text-gray-400 hover:text-white">Отмена</Button>
-                      </Link>
-                      <Button 
-                        type="submit" 
-                        className="bg-[#e81c5a] hover:bg-[#c21548] text-white shadow-lg shadow-[#e81c5a]/20" 
-                        disabled={isSubmitting || !selectedContractId}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-red-400 hover:text-red-300 hover:bg-red-500/10"
+                        onClick={() => removeForm(index)}
                       >
-                          {isSubmitting ? 'Отправка...' : 'Отправить отчет'}
+                        <Trash2 className="w-4 h-4" />
                       </Button>
-                  </div>
-              </form>
-              </CardContent>
-          )}
-        </Card>
+                    </div>
+
+                    {/* Form Fields */}
+                    <div className="space-y-4">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <label className="text-xs font-medium text-gray-400 uppercase tracking-wide">Предмет</label>
+                          <Input 
+                            placeholder="Например: Кабель" 
+                            className="bg-[#0a0a0a] border-[#1f1f1f] text-white placeholder:text-gray-600 focus-visible:ring-blue-500/50" 
+                            value={form.itemName}
+                            onChange={(e) => updateForm(index, 'itemName', e.target.value)}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-xs font-medium text-gray-400 uppercase tracking-wide">Количество</label>
+                          <Input 
+                            type="number" 
+                            placeholder="0" 
+                            min="1"
+                            className="bg-[#0a0a0a] border-[#1f1f1f] text-white placeholder:text-gray-600 focus-visible:ring-blue-500/50" 
+                            value={form.quantity}
+                            onChange={(e) => updateForm(index, 'quantity', e.target.value)}
+                          />
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <label className="text-xs font-medium text-gray-400 uppercase tracking-wide">Доказательства</label>
+                        <Input 
+                          placeholder="Ссылка на Imgur / YouTube" 
+                          className="bg-[#0a0a0a] border-[#1f1f1f] text-white placeholder:text-gray-600 focus-visible:ring-blue-500/50" 
+                          value={form.proof}
+                          onChange={(e) => updateForm(index, 'proof', e.target.value)}
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <label className="text-xs font-medium text-gray-400 uppercase tracking-wide">Комментарий</label>
+                        <textarea 
+                          className="w-full min-h-[80px] bg-[#0a0a0a] border border-[#1f1f1f] rounded-lg p-3 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/50 resize-y transition-all"
+                          placeholder="Дополнительные детали..."
+                          value={form.comment}
+                          onChange={(e) => updateForm(index, 'comment', e.target.value)}
+                        />
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+
+          {/* Submit Button */}
+          <div className="flex justify-end gap-3 pt-4">
+            <Link href="/contracts">
+              <Button variant="ghost" className="text-gray-400 hover:text-white">Отмена</Button>
+            </Link>
+            <Button 
+              className="bg-[#e81c5a] hover:bg-[#c21548] text-white shadow-lg shadow-[#e81c5a]/20" 
+              onClick={handleSubmitAll}
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? 'Отправка...' : `Отправить все отчеты (${reportForms.filter(f => f.itemName && f.quantity && f.proof).length})`}
+            </Button>
+          </div>
+        </>
       )}
       
       {/* Help Panel */}
