@@ -4,11 +4,14 @@ import { OnlineUsers } from '@/components/online-users';
 import { cn } from '@/lib/utils';
 import {
     ClipboardList,
+    Clock,
     LayoutDashboard,
     LogOut,
     Send,
     Settings,
-    Users
+    Trophy,
+    Users,
+    Wallet
 } from 'lucide-react';
 import { signOut, useSession } from 'next-auth/react';
 import Link from 'next/link';
@@ -17,8 +20,14 @@ import { usePathname } from 'next/navigation';
 const navigation = [
   { name: 'Дашборд', href: '/', icon: LayoutDashboard },
   { name: 'Контракты', href: '/contracts', icon: ClipboardList },
+  { name: 'Зал Славы', href: '/leaderboard', icon: Trophy },
   { name: 'Сдать отчет', href: '/report', icon: Send },
   { name: 'Состав', href: '/members', icon: Users },
+];
+
+const finance = [
+    { name: 'Кошелек', href: '/wallet', icon: Wallet },
+    { name: 'История', href: '/history', icon: Clock },
 ];
 
 export function Sidebar() {
@@ -42,6 +51,32 @@ export function Sidebar() {
         </div>
         
         {navigation.map((item) => {
+          const isActive = pathname === item.href;
+          return (
+            <Link
+              key={item.name}
+              href={item.href}
+              className={cn(
+                "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all group",
+                isActive 
+                  ? "bg-[#e81c5a]/10 text-[#e81c5a]" 
+                  : "text-gray-400 hover:text-white hover:bg-white/5"
+              )}
+            >
+              <item.icon className={cn(
+                "w-5 h-5",
+                isActive ? "text-[#e81c5a]" : "text-gray-500 group-hover:text-white"
+              )} />
+              {item.name}
+            </Link>
+          );
+        })}
+
+        <div className="mt-8 text-xs font-semibold text-gray-500 uppercase tracking-wider mb-4 px-3">
+            Финансы
+        </div>
+        
+        {finance.map((item) => {
           const isActive = pathname === item.href;
           return (
             <Link

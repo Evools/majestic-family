@@ -51,6 +51,7 @@ model User {
   reportParticipations ReportParticipant[]
   sessions             Session[]
   userContracts        UserContract[]
+  payoutRequests       PayoutRequest[]
 }
 
 model Report {
@@ -86,6 +87,17 @@ model ReportParticipant {
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([reportId, userId])
+}
+
+model PayoutRequest {
+  id        String       @id @default(cuid())
+  userId    String
+  amount    Float
+  status    PayoutStatus @default(PENDING)
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model Contract {
@@ -172,4 +184,10 @@ enum ContractStatus {
   ACTIVE
   COMPLETED
   CANCELLED
+}
+
+enum PayoutStatus {
+  PENDING
+  PAID
+  REJECTED
 }

@@ -1,5 +1,5 @@
 import { Card, CardContent } from "@/components/ui/card";
-import { ClipboardList, FileText, LayoutDashboard, Settings, Users } from "lucide-react";
+import { ClipboardList, FileText, LayoutDashboard, Settings, Users, Wallet } from "lucide-react";
 import Link from "next/link";
 
 export default function AdminDashboard() {
@@ -43,6 +43,14 @@ export default function AdminDashboard() {
       icon: Settings,
       color: "text-gray-500",
       bgColor: "bg-gray-500/10",
+    },
+    {
+      title: "Выплаты",
+      description: "Обработка запросов на вывод средств (Payouts).",
+      href: "/admin/payouts",
+      icon: Wallet,
+      color: "text-yellow-500",
+      bgColor: "bg-yellow-500/10",
     },
   ];
 
