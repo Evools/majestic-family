@@ -1,6 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -15,15 +12,14 @@ model Account {
   type              String
   provider          String
   providerAccountId String
-  refresh_token     String? @db.Text
-  access_token      String? @db.Text
+  refresh_token     String?
+  access_token      String?
   expires_at        Int?
   token_type        String?
   scope             String?
-  id_token          String? @db.Text
+  id_token          String?
   session_state     String?
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([provider, providerAccountId])
 }
@@ -34,6 +30,130 @@ model Session {
   userId       String
   expires      DateTime
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model User {
+  id                   String              @id @default(cuid())
+  name                 String?
+  email                String?             @unique
+  emailVerified        DateTime?
+  image                String?
+  role                 Role                @default(MEMBER)
+  firstName            String?
+  lastActiveAt         DateTime?
+  lastName             String?
+  staticId             String?             @unique
+  rank                 Int                 @default(1)
+  roleName             String              @default("Novice")
+  accounts             Account[]
+  reports              Report[]
+  verifiedReports      Report[]            @relation("Verifier")
+  reportParticipations ReportParticipant[]
+  sessions             Session[]
+  userContracts        UserContract[]
+}
+
+model Report {
+  id              String              @id @default(cuid())
+  userId          String
+  contractType    String
+  itemName        String
+  quantity        Int
+  proof           String
+  comment         String?
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+  familyShare     Float?              @default(0)
+  rejectionReason String?
+  userShare       Float?              @default(0)
+  value           Float?              @default(0)
+  verifierId      String?
+  status          ReportStatus        @default(PENDING)
+  userContractId  String?
+  userContract    UserContract?       @relation(fields: [userContractId], references: [id])
+  user            User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  verifier        User?               @relation("Verifier", fields: [verifierId], references: [id])
+  participants    ReportParticipant[]
+}
+
+model ReportParticipant {
+  id        String   @id @default(cuid())
+  reportId  String
+  userId    String
+  share     Float    @default(0)
+  createdAt DateTime @default(now())
+  report    Report   @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([reportId, userId])
+}
+
+model Contract {
+  id            String         @id @default(cuid())
+  title         String
+  description   String?
+  icon          String         @default("ClipboardList")
+  level         Int            @default(1)
+  isActive      Boolean        @default(true)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  reputation    Int            @default(0)
+  reward        Int            @default(0)
+  cooldownUntil DateTime?
+  maxSlots      Int            @default(10)
+  currentCycle  Int            @default(1)
+  isFlexible    Boolean        @default(false)
+  userContracts UserContract[]
+}
+
+model UserContract {
+  id          String         @id @default(cuid())
+  userId      String
+  contractId  String
+  status      ContractStatus @default(ACTIVE)
+  startedAt   DateTime       @default(now())
+  completedAt DateTime?
+  cycleNumber Int            @default(1)
+  reports     Report[]
+  contract    Contract       @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  user        User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, status])
+  @@index([contractId])
+}
+
+model DashboardSettings {
+  id               String   @id @default(cuid())
+  bonusActive      Boolean  @default(false)
+  bonusTitle       String?
+  bonusDescription String?
+  familyBalance    Float    @default(0)
+  goalName         String?
+  goalTarget       Float?
+  goalCurrent      Float?
+  familyLevel      Int      @default(1)
+  familyXP         Int      @default(0)
+  familyXPRequired Int      @default(1000)
+  updatedAt        DateTime @updatedAt
+  createdAt        DateTime @default(now())
+}
+
+model SystemSettings {
+  id                    String   @id @default(cuid())
+  familyName            String   @default("Shelby Family")
+  familyDescription     String?
+  familyLogoUrl         String?
+  userSharePercent      Int      @default(60)
+  familySharePercent    Int      @default(40)
+  minWithdrawal         Int      @default(10000)
+  contractCooldownHours Int      @default(24)
+  autoApproveReports    Boolean  @default(false)
+  xpMultiplier          Float    @default(1.5)
+  baseXPRequired        Int      @default(1000)
+  discordWebhook        String?
+  notifyNewReports      Boolean  @default(true)
+  updatedAt             DateTime @updatedAt
+  createdAt             DateTime @default(now())
 }
 
 enum Role {
@@ -52,146 +172,4 @@ enum ContractStatus {
   ACTIVE
   COMPLETED
   CANCELLED
-}
-
-model User {
-  id                   String              @id @default(cuid())
-  name                 String?
-  email                String?             @unique
-  emailVerified        DateTime?
-  image                String?
-  firstName            String?
-  lastName             String?
-  staticId             String?             @unique
-  lastActiveAt         DateTime?
-  role                 Role                @default(MEMBER)
-  rank                 Int                 @default(1)
-  roleName             String              @default("Novice")
-  accounts             Account[]
-  sessions             Session[]
-  reports              Report[]
-  verifiedReports      Report[]            @relation("Verifier")
-  reportParticipations ReportParticipant[]
-  userContracts        UserContract[]
-}
-
-model Report {
-  id             String       @id @default(cuid())
-  userId         String
-  contractType   String
-  userContractId String?
-  itemName       String
-  quantity       Int
-  proof          String
-  comment        String?
-  status         ReportStatus @default(PENDING)
-
-  value       Float? @default(0)
-  userShare   Float? @default(0)
-  familyShare Float? @default(0)
-
-  verifierId      String?
-  rejectionReason String?
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  user         User                @relation(fields: [userId], references: [id], onDelete: Cascade)
-  verifier     User?               @relation("Verifier", fields: [verifierId], references: [id])
-  participants ReportParticipant[]
-  userContract UserContract?       @relation(fields: [userContractId], references: [id])
-}
-
-model ReportParticipant {
-  id       String @id @default(cuid())
-  reportId String
-  userId   String
-  share    Float  @default(0)
-
-  createdAt DateTime @default(now())
-
-  report Report @relation(fields: [reportId], references: [id], onDelete: Cascade)
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([reportId, userId])
-}
-
-model Contract {
-  id            String         @id @default(cuid())
-  title         String
-  description   String?
-  reward        Int            @default(0)
-  reputation    Int            @default(0)
-  icon          String         @default("ClipboardList")
-  level         Int            @default(1)
-  isActive      Boolean        @default(true)
-  isFlexible    Boolean        @default(false)
-  maxSlots      Int            @default(10)
-  currentCycle  Int            @default(1)
-  cooldownUntil DateTime?
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
-  userContracts UserContract[]
-}
-
-model UserContract {
-  id          String         @id @default(cuid())
-  userId      String
-  contractId  String
-  status      ContractStatus @default(ACTIVE)
-  cycleNumber Int            @default(1)
-
-  startedAt   DateTime  @default(now())
-  completedAt DateTime?
-
-  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  contract Contract @relation(fields: [contractId], references: [id], onDelete: Cascade)
-  reports  Report[]
-
-  @@index([userId, status])
-  @@index([contractId])
-}
-
-model DashboardSettings {
-  id String @id @default(cuid())
-
-  bonusActive      Boolean @default(false)
-  bonusTitle       String?
-  bonusDescription String?
-
-  familyBalance Float @default(0)
-
-  goalName    String?
-  goalTarget  Float?
-  goalCurrent Float?
-
-  familyLevel      Int @default(1)
-  familyXP         Int @default(0)
-  familyXPRequired Int @default(1000)
-
-  updatedAt DateTime @updatedAt
-  createdAt DateTime @default(now())
-}
-
-model SystemSettings {
-  id String @id @default(cuid())
-
-  familyName         String  @default("Shelby Family")
-  familyDescription  String?
-  familyLogoUrl      String?
-  userSharePercent   Int     @default(60)
-  familySharePercent Int     @default(40)
-  minWithdrawal      Int     @default(10000)
-
-  contractCooldownHours Int     @default(24)
-  autoApproveReports    Boolean @default(false)
-
-  xpMultiplier   Float @default(1.5)
-  baseXPRequired Int   @default(1000)
-
-  discordWebhook   String?
-  notifyNewReports Boolean @default(true)
-
-  updatedAt DateTime @updatedAt
-  createdAt DateTime @default(now())
 }

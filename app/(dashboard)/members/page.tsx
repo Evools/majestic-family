@@ -1,5 +1,6 @@
 'use client';
 
+import { InviteModal } from '@/components/invite-modal';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -47,6 +48,7 @@ export default function MembersPage() {
     const [members, setMembers] = useState<Member[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
+    const [isInviteOpen, setIsInviteOpen] = useState(false);
 
     useEffect(() => {
         const fetchMembers = async () => {
@@ -77,7 +79,11 @@ export default function MembersPage() {
           <p className="text-gray-400 mt-1">Управление участниками и их активностью.</p>
         </div>
         <div className="flex gap-2">
-            <Button size="sm" className="bg-[#e81c5a] hover:bg-[#c21548]">
+            <Button 
+                size="sm" 
+                className="bg-[#e81c5a] hover:bg-[#c21548]"
+                onClick={() => setIsInviteOpen(true)}
+            >
                 <UserPlus className="w-4 h-4 mr-2" />
                 Пригласить
             </Button>
@@ -189,6 +195,11 @@ export default function MembersPage() {
               )}
           </div>
       </Card>
+
+      <InviteModal 
+          isOpen={isInviteOpen} 
+          onClose={() => setIsInviteOpen(false)} 
+      />
     </div>
   );
 }
