@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Report } from '@prisma/client';
-import { Check, Clock, DollarSign, ExternalLink, Star, Users, X } from 'lucide-react';
+import { Check, ExternalLink, Users, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 // Extend Report type to include relations
@@ -102,231 +102,204 @@ export default function AdminReportsPage() {
     return user.name || 'Unknown User';
   };
 
+  // Calculate Stats
+  const stats = {
+    pending: reports.length,
+    totalValue: reports.reduce((acc, r) => acc + (r.userContract?.contract?.reward || 0), 0),
+    totalParticipants: reports.reduce((acc, r) => acc + r.participants.length, 0),
+  };
+
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <p className="text-gray-400">Загрузка...</p>
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="flex flex-col items-center gap-3">
+            <div className="w-8 h-8 border-2 border-[#e81c5a] border-t-transparent rounded-full animate-spin" />
+            <p className="text-xs font-bold text-gray-500 uppercase tracking-widest">Загрузка данных...</p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-8">
-      <div>
-        <h1 className="text-3xl font-bold text-white mb-2">Проверка отчетов</h1>
-        <p className="text-gray-400">Одобрение и отклонение отчетов участников.</p>
+    <div className="max-w-[1400px] mx-auto space-y-8 animate-in fade-in duration-500">
+      {/* Header & Stats */}
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+        <div>
+          <h1 className="text-3xl font-black text-white tracking-tight mb-2">Отчеты</h1>
+          <p className="text-sm font-medium text-gray-500 uppercase tracking-widest">Проверка и распределение вознаграждений</p>
+        </div>
+
+        <div className="flex items-center gap-4">
+            <div className="px-4 py-3 rounded-xl bg-white/5 border border-white/5 flex flex-col gap-1 min-w-[140px]">
+                <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Ожидают</span>
+                <span className="text-xl font-black text-white">{stats.pending}</span>
+            </div>
+            <div className="px-4 py-3 rounded-xl bg-white/5 border border-white/5 flex flex-col gap-1 min-w-[140px]">
+                <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Сумма фонда</span>
+                <span className="text-xl font-black text-green-500">${stats.totalValue.toLocaleString()}</span>
+            </div>
+            <div className="px-4 py-3 rounded-xl bg-white/5 border border-white/5 flex flex-col gap-1 min-w-[140px]">
+                <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Участников</span>
+                <span className="text-xl font-black text-blue-500">{stats.totalParticipants}</span>
+            </div>
+        </div>
       </div>
       
       {reports.length === 0 ? (
-        <Card className="bg-[#0a0a0a] border border-[#1f1f1f]">
-            <CardContent className="p-8 text-center text-gray-500">
-                Нет ожидающих отчетов.
+        <Card className="bg-[#0a0a0a] border-[#1f1f1f] border-dashed">
+            <CardContent className="p-12 text-center">
+                <div className="w-12 h-12 rounded-full bg-white/5 flex items-center justify-center mx-auto mb-4">
+                    <Check className="w-6 h-6 text-gray-600" />
+                </div>
+                <h3 className="text-lg font-bold text-white mb-1">Все отчеты проверены</h3>
+                <p className="text-sm text-gray-500">На данный момент нет новых отчетов для модерации.</p>
             </CardContent>
         </Card>
       ) : (
-        <div className="grid gap-4">
+        <div className="space-y-3">
           {reports.map((report) => {
             const participantCount = report.participants.length;
-            // Get reward from contract (this is the total value)
             const contractReward = report.userContract?.contract?.reward || 0;
-            const totalValue = contractReward;
-            // Family gets 40% of total
-            const familyShare = totalValue * 0.4;
-            // Users get 60% of total
-            const userShare = totalValue * 0.6;
-            // Each participant gets equal share
+            const familyShare = contractReward * 0.4;
+            const userShare = contractReward * 0.6;
             const individualShare = participantCount > 0 ? userShare / participantCount : 0;
+            const isProcessing = processingId === report.id;
+            const isActive = activeAction?.id === report.id;
 
             return (
-              <Card key={report.id} className="bg-[#0a0a0a] border border-[#1f1f1f]">
-                <CardContent className="p-6">
-                  <div className="flex flex-col gap-6">
-                    {/* Header: User Info + Contract */}
-                    <div className="flex items-start justify-between">
-                      <div className="flex items-start gap-4">
+              <div 
+                key={report.id} 
+                className={`group relative bg-[#0a0a0a] border ${isActive ? 'border-[#e81c5a]/40 shadow-[0_0_20px_rgba(232,28,90,0.1)]' : 'border-[#1f1f1f] hover:border-white/10'} rounded-xl transition-all duration-300 overflow-hidden`}
+              >
+                {/* Horizontal Layout */}
+                <div className="p-4 flex flex-col lg:flex-row lg:items-center gap-6">
+                  
+                  {/* 1. Author Column */}
+                  <div className="flex items-center gap-4 lg:w-[250px] shrink-0">
+                    <div className="relative">
                         {report.user.image ? (
-                            <img src={report.user.image} alt={getUserDisplayName(report.user)} className="w-10 h-10 rounded-full" />
+                            <img src={report.user.image} alt="" className="w-10 h-10 rounded-full object-cover border border-white/10" />
                         ) : (
-                            <div className="w-10 h-10 rounded-full bg-gray-700" />
+                            <div className="w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center">
+                                <Users className="w-5 h-5 text-gray-600" />
+                            </div>
                         )}
-                        <div>
-                            <p className="font-bold text-white">{getUserDisplayName(report.user)}</p>
-                            <p className="text-xs text-gray-500 flex items-center gap-1">
-                                <Clock className="w-3 h-3" />
-                                {new Date(report.createdAt).toLocaleDateString()}
-                            </p>
-                        </div>
-                      </div>
-
-                      {/* Contract Badge */}
-                      {report.userContract?.contract && (
-                        <div className="flex flex-col items-end gap-1">
-                          <div className="px-3 py-1.5 rounded-lg bg-green-500/10 border border-green-500/20">
-                            <span className="text-sm font-bold text-green-500">{report.userContract.contract.title}</span>
-                          </div>
-                          <div className="flex items-center gap-2 text-xs">
-                            <div className="flex items-center gap-1 text-green-500">
-                              <DollarSign className="w-3 h-3" />
-                              <span className="font-bold">${contractReward.toLocaleString()}</span>
-                            </div>
-                            <div className="flex items-center gap-1 text-yellow-500">
-                              <Star className="w-3 h-3" />
-                              <span className="font-bold">+{report.userContract.contract.reputation} XP</span>
-                            </div>
-                          </div>
-                        </div>
-                      )}
+                        <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-green-500 border-2 border-[#0a0a0a]" />
                     </div>
-
-                    {/* Participants */}
-                    {participantCount > 0 && (
-                      <div className="space-y-2">
-                        <div className="flex items-center gap-2">
-                          <Users className="w-4 h-4 text-blue-500" />
-                          <span className="text-sm font-bold text-blue-500">{participantCount} участник{participantCount > 1 ? 'а' : ''}</span>
-                        </div>
-                        <div className="flex flex-wrap gap-2">
-                          {report.participants.map((participant) => (
-                            <div key={participant.id} className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/5 border border-white/10">
-                              {participant.user.image ? (
-                                <img src={participant.user.image} alt={getUserDisplayName(participant.user)} className="w-5 h-5 rounded-full" />
-                              ) : (
-                                <div className="w-5 h-5 rounded-full bg-gray-700" />
-                              )}
-                              <span className="text-xs text-gray-300">{getUserDisplayName(participant.user)}</span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Report Details */}
-                    <div className="space-y-2">
-                      <h3 className="text-white font-medium">{report.itemName} <span className="text-gray-500">x{report.quantity}</span></h3>
-                      
-                      {report.comment && (
-                          <p className="text-sm text-gray-400 bg-white/5 p-2 rounded border border-white/5">
-                              "{report.comment}"
-                          </p>
-                      )}
-                      
-                      <a 
-                          href={report.proof} 
-                          target="_blank" 
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center gap-2 text-xs text-[#e81c5a] hover:underline"
-                      >
-                          <ExternalLink className="w-3 h-3" />
-                          Смотреть доказательства
-                      </a>
-                    </div>
-
-                    {/* Payment Distribution Preview */}
-                    {contractReward > 0 && (
-                      <div className="space-y-2 p-3 rounded-lg bg-white/5 border border-white/10">
-                        <p className="text-xs font-bold text-gray-400 uppercase tracking-wide">Автоматическое распределение:</p>
-                        <div className="space-y-1.5 text-sm">
-                          <div className="flex justify-between">
-                            <span className="text-gray-400">Награда контракта:</span>
-                            <span className="text-white font-bold">${totalValue.toLocaleString()}</span>
-                          </div>
-                          <div className="h-px bg-white/10 my-1" />
-                          <div className="flex justify-between">
-                            <span className="text-gray-400">Семье (40%):</span>
-                            <span className="text-yellow-500 font-bold">${familyShare.toLocaleString()}</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-gray-400">Участникам (60%):</span>
-                            <span className="text-green-500 font-bold">${userShare.toLocaleString()}</span>
-                          </div>
-                          <div className="h-px bg-white/10 my-2" />
-                          <div className="flex justify-between">
-                            <span className="text-gray-400">Каждому участнику:</span>
-                            <span className="text-blue-500 font-bold">${individualShare.toLocaleString()}</span>
-                          </div>
-                          {participantCount > 0 && (
-                            <p className="text-[10px] text-gray-500 mt-1">
-                              ${userShare.toLocaleString()} ÷ {participantCount} участник{participantCount > 1 ? 'а' : ''}
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Actions */}
-                    <div className="flex flex-col gap-2">
-                      {activeAction?.id === report.id ? (
-                          <div className="space-y-3 animate-in fade-in zoom-in-95 bg-[#1a1a1a] p-4 rounded-lg border border-[#2f2f2f]">
-                              {activeAction.type === 'reject' ? (
-                                <>
-                                  <p className="text-xs font-bold text-white mb-1">Причина отказа:</p>
-                                  <Input 
-                                      autoFocus
-                                      type="text" 
-                                      placeholder="Incorrect proof..."
-                                      className="h-9 text-sm bg-[#0a0a0a]"
-                                      value={rejectionReason}
-                                      onChange={(e) => setRejectionReason(e.target.value)}
-                                  />
-                                </>
-                              ) : (
-                                <p className="text-sm text-green-500">
-                                  Подтвердите одобрение отчета. Средства будут распределены автоматически согласно контракту.
-                                </p>
-                              )}
-                              <div className="flex gap-2 pt-1">
-                                  <Button 
-                                    size="sm" 
-                                    variant="outline" 
-                                    className="h-8 w-full text-xs" 
-                                    onClick={() => {
-                                      setActiveAction(null);
-                                      setRejectionReason('');
-                                    }}
-                                  >
-                                    Отмена
-                                  </Button>
-                                  <Button 
-                                      size="sm" 
-                                      className={`h-8 w-full text-xs font-medium ${
-                                        activeAction.type === 'approve' 
-                                          ? 'bg-green-600 hover:bg-green-700 text-white' 
-                                          : 'bg-red-600 hover:bg-red-700 text-white'
-                                      }`}
-                                      onClick={handleAction}
-                                      disabled={(activeAction.type === 'reject' && !rejectionReason) || processingId === report.id}
-                                  >
-                                      {processingId === report.id ? 'Обработка...' : 'Подтвердить'}
-                                  </Button>
-                              </div>
-                          </div>
-                      ) : (
-                          <div className="flex gap-2">
-                              <Button 
-                                  className="bg-green-600 hover:bg-green-700 text-white h-9 flex-1 font-medium"
-                                  onClick={() => {
-                                      setActiveAction({ id: report.id, type: 'approve' });
-                                      setRejectionReason('');
-                                  }}
-                              >
-                                  <Check className="w-4 h-4 mr-2" /> Одобрить
-                              </Button>
-                               <Button 
-                                  variant="outline" 
-                                  className="bg-red-500/10 hover:bg-red-500/20 text-red-400 border-red-500/30 hover:border-red-500/50 h-9 flex-1 font-medium"
-                                  onClick={() => {
-                                      setActiveAction({ id: report.id, type: 'reject' });
-                                      setRejectionReason('');
-                                  }}
-                              >
-                                  <X className="w-4 h-4 mr-2" /> Отклонить
-                              </Button>
-                          </div>
-                      )}
+                    <div>
+                        <p className="text-sm font-black text-white truncate max-w-[160px]">{getUserDisplayName(report.user)}</p>
+                        <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mt-0.5">
+                            {new Date(report.createdAt).toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
+                        </p>
                     </div>
                   </div>
-                </CardContent>
-              </Card>
+
+                  {/* 2. Contract Info Column */}
+                  <div className="flex-1 flex flex-col sm:flex-row sm:items-center gap-4 border-l border-white/5 pl-6">
+                    <div className="flex-1 min-w-[200px]">
+                        <div className="flex items-center gap-2 mb-1.5">
+                            <span className="text-[10px] font-black text-white bg-green-500/10 border border-green-500/20 px-2 py-0.5 rounded uppercase tracking-widest">
+                                {report.userContract?.contract?.title || 'Contract'}
+                            </span>
+                            <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">
+                                {report.itemName} x{report.quantity}
+                            </span>
+                        </div>
+                        <div className="flex items-center gap-3">
+                            <a 
+                                href={report.proof} 
+                                target="_blank" 
+                                rel="noopener noreferrer"
+                                className="flex items-center gap-1.5 text-[10px] font-bold text-[#e81c5a] hover:text-[#ff2d6d] uppercase tracking-widest transition-colors group/link"
+                            >
+                                <ExternalLink className="w-3.5 h-3.5 group-hover/link:scale-110 transition-transform" />
+                                Доказательства
+                            </a>
+                            {report.comment && (
+                                <span className="text-[10px] font-medium text-gray-500 italic truncate max-w-[200px]">
+                                    "{report.comment}"
+                                </span>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* 3. Reward Distribution Summary */}
+                    <div className="flex items-center gap-4 bg-white/2 px-3 py-2 rounded-lg border border-white/5 shrink-0">
+                        <div className="flex flex-col gap-0.5">
+                            <span className="text-[9px] font-bold text-gray-500 uppercase tracking-widest leading-none">Семья 40%</span>
+                            <span className="text-xs font-black text-yellow-500/80">${familyShare.toLocaleString()}</span>
+                        </div>
+                        <div className="w-px h-6 bg-white/5" />
+                        <div className="flex flex-col gap-0.5">
+                            <span className="text-[9px] font-bold text-gray-500 uppercase tracking-widest leading-none">Участникам 60%</span>
+                            <span className="text-xs font-black text-green-500/80">${userShare.toLocaleString()}</span>
+                        </div>
+                        <div className="w-px h-6 bg-white/5" />
+                        <div className="flex flex-col gap-0.5 min-w-[60px]">
+                            <span className="text-[9px] font-bold text-gray-500 uppercase tracking-widest leading-none flex items-center gap-1">
+                                <Users className="w-2.5 h-2.5" /> {participantCount + 1} чел.
+                            </span>
+                            <span className="text-xs font-black text-blue-500/80">${individualShare.toLocaleString()} <span className="text-[9px] text-gray-600 font-bold uppercase">/ чел</span></span>
+                        </div>
+                    </div>
+                  </div>
+
+                  {/* 4. Actions Column */}
+                  <div className="lg:w-[240px] flex items-center justify-end gap-2 shrink-0 border-l border-white/5 pl-6">
+                    {isActive ? (
+                        <div className="flex items-center gap-2 animate-in slide-in-from-right-2 duration-300">
+                             {activeAction.type === 'reject' && (
+                                <Input 
+                                    autoFocus
+                                    placeholder="Причина..."
+                                    className="h-8 w-32 bg-[#050505] border-white/10 text-[10px] font-bold"
+                                    value={rejectionReason}
+                                    onChange={(e) => setRejectionReason(e.target.value)}
+                                />
+                             )}
+                             <Button 
+                                size="sm" 
+                                variant="ghost" 
+                                className="h-8 px-3 text-[10px] font-bold uppercase tracking-widest text-gray-500 hover:text-white"
+                                onClick={() => { setActiveAction(null); setRejectionReason(''); }}
+                                disabled={isProcessing}
+                             >
+                                <X className="w-3.5 h-3.5" />
+                             </Button>
+                             <Button 
+                                size="sm" 
+                                className={`h-8 px-4 text-[10px] font-black uppercase tracking-widest shadow-lg ${
+                                    activeAction.type === 'approve' 
+                                        ? 'bg-green-600 hover:bg-green-700 shadow-green-600/10' 
+                                        : 'bg-red-600 hover:bg-red-700 shadow-red-600/10'
+                                }`}
+                                onClick={handleAction}
+                                disabled={isProcessing || (activeAction.type === 'reject' && !rejectionReason)}
+                             >
+                                {isProcessing ? '...' : (activeAction.type === 'approve' ? 'ОК' : 'ДА')}
+                             </Button>
+                        </div>
+                    ) : (
+                        <div className="flex items-center gap-2">
+                             <Button 
+                                size="sm" 
+                                className="bg-white/5 hover:bg-green-500/10 border border-white/5 hover:border-green-500/20 text-[10px] font-bold uppercase tracking-widest text-gray-400 hover:text-green-500 h-8 px-4 transition-all duration-300"
+                                onClick={() => setActiveAction({ id: report.id, type: 'approve' })}
+                             >
+                                Одобрить
+                             </Button>
+                             <Button 
+                                size="sm" 
+                                className="bg-white/5 hover:bg-red-500/10 border border-white/5 hover:border-red-500/20 text-[10px] font-bold uppercase tracking-widest text-gray-400 hover:text-red-500 h-8 px-4 transition-all duration-300"
+                                onClick={() => setActiveAction({ id: report.id, type: 'reject' })}
+                             >
+                                Отклонить
+                             </Button>
+                        </div>
+                    )}
+                  </div>
+                </div>
+              </div>
             );
           })}
         </div>
