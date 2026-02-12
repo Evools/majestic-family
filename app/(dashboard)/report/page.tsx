@@ -36,7 +36,6 @@ type Member = {
   image: string | null;
 };
 
-// --- Sub-components ---
 
 const ContractHeader = ({ uc, onRemove }: { uc: UserContractWithContract, onRemove: () => void }) => (
   <div className="flex items-start justify-between mb-6 pb-4 border-b border-white/10">
