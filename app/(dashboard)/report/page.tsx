@@ -7,19 +7,40 @@ import { Input } from '@/components/ui/input';
 import { AlertCircle, CheckCircle2 } from 'lucide-react';
 import { useState } from 'react';
 
+import { useSession } from 'next-auth/react';
+
 export default function ReportPage() {
+    const { data: session } = useSession();
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [success, setSuccess] = useState(false);
     const [contractType, setContractType] = useState('');
   
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
       e.preventDefault();
       setIsSubmitting(true);
       
-      setTimeout(() => {
+      const formData = new FormData(e.currentTarget);
+      const data = Object.fromEntries(formData.entries());
+
+      try {
+        const response = await fetch('/api/report', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data),
+        });
+
+        if (response.ok) {
+          setSuccess(true);
+          // Optional: Reset form or keep success state
+        } else {
+          console.error('Submission failed');
+          // Handle error state if needed
+        }
+      } catch (error) {
+        console.error('Error submitting report:', error);
+      } finally {
         setIsSubmitting(false);
-        setSuccess(true);
-      }, 1500);
+      }
     };
 
   return (
@@ -42,33 +63,64 @@ export default function ReportPage() {
         ) : (
             <CardContent className="p-8">
             <form onSubmit={handleSubmit} className="space-y-6">
-                <div className="grid grid-cols-2 gap-6">
-                    <div className="col-span-2 md:col-span-1 space-y-2">
+                <div className="space-y-6">
+                    <div className="space-y-2">
                         <label className="text-xs font-medium text-gray-400 uppercase tracking-wide">Тип контракта</label>
                         <CustomSelect 
                             options={[
-                                { value: 'delivery', label: 'Дальнобойщик' },
-                                { value: 'car_theft', label: 'Угон транспорта' },
-                                { value: 'territory', label: 'Захват территории' },
-                                { value: 'resources', label: 'Сбор ресурсов' }
+                                { value: 'fishing_i', label: 'Рыбалка I уровня' },
+                                { value: 'fishing_ii', label: 'Рыбалка II уровня' },
+                                { value: 'fishing_iii', label: 'Рыбалка III уровня' },
+                                { value: 'fishing_iv', label: 'Рыбалка IV уровня' },
+                                { value: 'fishing_v', label: 'Рыбалка V уровня' },
+                                { value: 'fishing_vi', label: 'Рыбалка VI уровня' },
+                                { value: 'fishing_x', label: 'Рыбалка VII уровня' },
+                                { value: 'fishing_x', label: 'Рыбалка VIII уровня' },
+                                { value: 'fishing_x', label: 'Рыбалка IX уровня' },
+                                { value: 'metallurgy', label: 'Металлургия' },
+                                { value: 'boxes', label: 'Товар со склада' },
+                                { value: 'atelier', label: 'Ателье' }
                             ]}
                             value={contractType}
                             onChange={setContractType}
                             placeholder="Выберите контракт"
                         />
+                         {/* Hidden input to include select value in FormData */}
+                         <input type="hidden" name="contractType" value={contractType} />
                     </div>
-                    <div className="col-span-2 md:col-span-1 space-y-2">
-                        <label className="text-xs font-medium text-gray-400 uppercase tracking-wide">Сумма вознаграждения</label>
-                        <div className="relative">
-                            <span className="absolute left-3 top-2.5 text-gray-500">$</span>
-                            <Input placeholder="50,000" className="pl-6 bg-[#0a0a0a] border-[#1f1f1f] text-white placeholder:text-gray-600 focus-visible:ring-[#e81c5a]/50" />
+
+                    <div className="grid grid-cols-2 gap-6">
+                        <div className="col-span-2 md:col-span-1 space-y-2">
+                            <label className="text-xs font-medium text-gray-400 uppercase tracking-wide">Предмет</label>
+                            <Input 
+                                name="itemName" 
+                                placeholder="Например: Кабель" 
+                                className="bg-[#0a0a0a] border-[#1f1f1f] text-white placeholder:text-gray-600 focus-visible:ring-[#e81c5a]/50" 
+                                required 
+                            />
+                        </div>
+                        <div className="col-span-2 md:col-span-1 space-y-2">
+                             <label className="text-xs font-medium text-gray-400 uppercase tracking-wide">Количество</label>
+                            <Input 
+                                name="quantity" 
+                                type="number" 
+                                placeholder="0" 
+                                min="1"
+                                className="bg-[#0a0a0a] border-[#1f1f1f] text-white placeholder:text-gray-600 focus-visible:ring-[#e81c5a]/50" 
+                                required 
+                            />
                         </div>
                     </div>
                 </div>
 
                 <div className="space-y-2">
                     <label className="text-xs font-medium text-gray-400 uppercase tracking-wide">Доказательства</label>
-                    <Input placeholder="Ссылка на Imgur / YouTube" className="bg-[#0a0a0a] border-[#1f1f1f] text-white placeholder:text-gray-600 focus-visible:ring-[#e81c5a]/50" />
+                    <Input 
+                        name="proof"
+                        placeholder="Ссылка на Imgur / YouTube" 
+                        className="bg-[#0a0a0a] border-[#1f1f1f] text-white placeholder:text-gray-600 focus-visible:ring-[#e81c5a]/50" 
+                        required
+                    />
                     <p className="text-[10px] text-gray-500 flex items-center gap-1">
                         <AlertCircle className="w-3 h-3" />
                         Убедитесь, что ссылка доступна для просмотра.
@@ -78,6 +130,7 @@ export default function ReportPage() {
                 <div className="space-y-2">
                     <label className="text-xs font-medium text-gray-400 uppercase tracking-wide">Комментарий</label>
                     <textarea 
+                        name="comment"
                         className="w-full min-h-[120px] bg-[#0a0a0a] border border-[#1f1f1f] rounded-lg p-3 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-[#e81c5a] focus:ring-1 focus:ring-[#e81c5a]/50 resize-y transition-all"
                         placeholder="Дополнительные детали..."
                     />

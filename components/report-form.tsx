@@ -10,8 +10,12 @@ export function ReportForm() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    const formData = new FormData(e.currentTarget);
+    const data = Object.fromEntries(formData.entries());
+    console.log('Form submission:', data);
+
     setIsSubmitting(true);
     
     // Simulate API call
@@ -58,17 +62,46 @@ export function ReportForm() {
               </label>
               <div className="relative">
                 <select 
+                    name="contractType"
                     className="w-full h-12 bg-black/40 border border-white/10 rounded-lg px-4 text-white focus:outline-none focus:border-[#e81c5a] transition-all appearance-none cursor-pointer hover:bg-white/5"
                     required
+                    defaultValue=""
                 >
-                    <option value="" disabled selected>Выберите контракт...</option>
-                    <option value="transport">Перевозка транспортных средств</option>
-                    <option value="territory">Захват территории</option>
-                    <option value="materials">Сбор материалов</option>
-                    <option value="training">Проведение тренировки</option>
+                    <option value="" disabled>Выберите контракт...</option>
+                    <option value="metallurgy">Металлургия</option>
+                    <option value="fishing_x">Рыбалка X уровня</option>
+                    <option value="boxes">Коробки</option>
+                    <option value="atelier">Ателье</option>
                 </select>
                 <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-gray-500 text-xs">▼</div>
               </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                    <label className="text-xs uppercase tracking-widest font-bold text-[#737373] ml-1">
+                        Предмет
+                    </label>
+                    <Input 
+                        name="itemName"
+                        placeholder="Например: Кабель, Рыба..."
+                        className="h-12 bg-black/40 border-white/10 hover:bg-white/5 focus:border-[#e81c5a]"
+                        required
+                    />
+                </div>
+                <div className="space-y-2">
+                    <label className="text-xs uppercase tracking-widest font-bold text-[#737373] ml-1">
+                        Количество
+                    </label>
+                    <Input 
+                        name="quantity"
+                        type="number"
+                        placeholder="0"
+                        min="1"
+                        className="h-12 bg-black/40 border-white/10 hover:bg-white/5 focus:border-[#e81c5a]"
+                        required
+                    />
+                </div>
             </div>
 
             <div className="space-y-2">
@@ -76,6 +109,7 @@ export function ReportForm() {
                 Комментарий
               </label>
               <textarea 
+                name="comment"
                 rows={4}
                 className="w-full bg-black/40 border border-white/10 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-[#e81c5a] transition-all resize-none placeholder:text-gray-700 hover:bg-white/5"
                 placeholder="Опишите детали выполнения задания..."
@@ -88,6 +122,7 @@ export function ReportForm() {
               </label>
               <div className="relative group">
                 <Input 
+                  name="proof"
                   type="url"
                   placeholder="https://imgur.com/..."
                   className="pl-12 h-12 bg-black/40 border-white/10 hover:bg-white/5 focus:border-[#e81c5a]"
