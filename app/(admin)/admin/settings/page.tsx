@@ -214,6 +214,23 @@ export default function AdminSettingsPage() {
                     Сумма: {formData.userSharePercent}% участнику + {formData.familySharePercent}% семье = {formData.userSharePercent + formData.familySharePercent}%
                   </p>
                 </div>
+
+                <div className="p-4 rounded-lg bg-purple-500/5 border border-purple-500/10 space-y-2">
+                  <p className="text-xs font-bold text-purple-400 uppercase tracking-wide">💡 Как работает распределение:</p>
+                  <div className="text-xs text-gray-400 space-y-1">
+                    <p>• <span className="text-yellow-500 font-semibold">Доля семьи ({formData.familySharePercent}%)</span> - идет в общий бюджет</p>
+                    <p>• <span className="text-green-500 font-semibold">Доля участников ({formData.userSharePercent}%)</span> - делится между всеми участниками контракта</p>
+                    <div className="mt-2 pt-2 border-t border-purple-500/20">
+                      <p className="font-semibold text-white mb-1">Примеры:</p>
+                      <p>Контракт на $10,000 (соло):</p>
+                      <p className="ml-3">→ Семье: ${(10000 * formData.familySharePercent / 100).toLocaleString()}</p>
+                      <p className="ml-3">→ Участнику: ${(10000 * formData.userSharePercent / 100).toLocaleString()}</p>
+                      <p className="mt-1">Контракт на $10,000 (4 человека):</p>
+                      <p className="ml-3">→ Семье: ${(10000 * formData.familySharePercent / 100).toLocaleString()}</p>
+                      <p className="ml-3">→ Каждому: ${(10000 * formData.userSharePercent / 100 / 4).toLocaleString()}</p>
+                    </div>
+                  </div>
+                </div>
               </div>
             </CardContent>
           </Card>

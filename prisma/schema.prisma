@@ -48,79 +48,116 @@ enum ReportStatus {
   REJECTED
 }
 
+enum ContractStatus {
+  ACTIVE
+  COMPLETED
+  CANCELLED
+}
+
 model User {
-  id              String    @id @default(cuid())
-  name            String?
-  email           String?   @unique
-  emailVerified   DateTime?
-  image           String?
-  firstName       String?
-  lastName        String?
-  staticId        String?   @unique
-  lastActiveAt    DateTime?
-  role            Role      @default(MEMBER)
-  accounts        Account[]
-  sessions        Session[]
-  reports         Report[]
-  verifiedReports Report[]  @relation("Verifier")
+  id                   String              @id @default(cuid())
+  name                 String?
+  email                String?             @unique
+  emailVerified        DateTime?
+  image                String?
+  firstName            String?
+  lastName             String?
+  staticId             String?             @unique
+  lastActiveAt         DateTime?
+  role                 Role                @default(MEMBER)
+  accounts             Account[]
+  sessions             Session[]
+  reports              Report[]
+  verifiedReports      Report[]            @relation("Verifier")
+  reportParticipations ReportParticipant[]
+  userContracts        UserContract[]
 }
 
 model Report {
-  id           String       @id @default(cuid())
-  userId       String
-  contractType String
-  // Optional link to a dynamic Contract if needed, but keeping string for flexibility for now
-  itemName     String
-  quantity     Int
-  proof        String
-  comment      String?
-  status       ReportStatus @default(PENDING)
+  id             String       @id @default(cuid())
+  userId         String
+  contractType   String
+  userContractId String?
+  itemName       String
+  quantity       Int
+  proof          String
+  comment        String?
+  status         ReportStatus @default(PENDING)
 
-  // Financials (Filled on Approval)
-  value       Float? @default(0) // Total value
-  userShare   Float? @default(0) // 60%
-  familyShare Float? @default(0) // 40%
+  value       Float? @default(0)
+  userShare   Float? @default(0)
+  familyShare Float? @default(0)
 
-  // Verification
   verifierId      String?
   rejectionReason String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  user     User  @relation(fields: [userId], references: [id], onDelete: Cascade)
-  verifier User? @relation("Verifier", fields: [verifierId], references: [id])
+  user         User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  verifier     User?               @relation("Verifier", fields: [verifierId], references: [id])
+  participants ReportParticipant[]
+  userContract UserContract?       @relation(fields: [userContractId], references: [id])
+}
+
+model ReportParticipant {
+  id       String @id @default(cuid())
+  reportId String
+  userId   String
+  share    Float  @default(0)
+
+  createdAt DateTime @default(now())
+
+  report Report @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([reportId, userId])
 }
 
 model Contract {
-  id          String   @id @default(cuid())
-  title       String
-  description String?
-  reward      Int      @default(0) // Money reward in dollars
-  reputation  Int      @default(0) // XP/reputation points
-  icon        String   @default("ClipboardList") // Lucide icon name
-  level       Int      @default(1)
-  isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id            String         @id @default(cuid())
+  title         String
+  description   String?
+  reward        Int            @default(0)
+  reputation    Int            @default(0)
+  icon          String         @default("ClipboardList")
+  level         Int            @default(1)
+  isActive      Boolean        @default(true)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  userContracts UserContract[]
+}
+
+model UserContract {
+  id         String         @id @default(cuid())
+  userId     String
+  contractId String
+  status     ContractStatus @default(ACTIVE)
+
+  startedAt   DateTime  @default(now())
+  completedAt DateTime?
+
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  contract Contract @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  reports  Report[]
+
+  @@index([userId, status])
+  @@index([contractId])
 }
 
 model DashboardSettings {
-  id               String  @id @default(cuid())
-  // Active Bonus
+  id String @id @default(cuid())
+
   bonusActive      Boolean @default(false)
   bonusTitle       String?
   bonusDescription String?
 
-  // Family Balance
   familyBalance Float @default(0)
 
-  // Financial Goal
   goalName    String?
   goalTarget  Float?
   goalCurrent Float?
 
-  // Family Level
   familyLevel      Int @default(1)
   familyXP         Int @default(0)
   familyXPRequired Int @default(1000)
@@ -132,25 +169,19 @@ model DashboardSettings {
 model SystemSettings {
   id String @id @default(cuid())
 
-  // Family Info
-  familyName        String  @default("Shelby Family")
-  familyDescription String?
-  familyLogoUrl     String?
+  familyName         String  @default("Shelby Family")
+  familyDescription  String?
+  familyLogoUrl      String?
+  userSharePercent   Int     @default(60)
+  familySharePercent Int     @default(40)
+  minWithdrawal      Int     @default(10000)
 
-  // Financial
-  userSharePercent   Int @default(60)
-  familySharePercent Int @default(40)
-  minWithdrawal      Int @default(10000)
-
-  // Contracts
   contractCooldownHours Int     @default(24)
   autoApproveReports    Boolean @default(false)
 
-  // Levels
   xpMultiplier   Float @default(1.5)
   baseXPRequired Int   @default(1000)
 
-  // Notifications
   discordWebhook   String?
   notifyNewReports Boolean @default(true)
 

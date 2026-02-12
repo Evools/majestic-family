@@ -1,4 +1,3 @@
-import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { Contract } from '@prisma/client';
 import { ClipboardList } from 'lucide-react';
@@ -68,17 +67,6 @@ export function ContractCard({ contract }: ContractCardProps) {
                 <span className="text-[#e81c5a] font-bold font-mono text-lg drop-shadow-[0_0_8px_rgba(232,28,90,0.3)]">+{reputation} XP</span>
             </div>
         </div>
-
-        {status === 'active' && (
-             <Button className="w-full bg-[#e81c5a] hover:bg-[#c21548] text-white border-0 transition-all font-bold py-3 h-auto text-[10px] uppercase tracking-widest">
-                Подписать контракт
-             </Button>
-        )}
-         {status !== 'active' && (
-             <Button disabled className="w-full bg-white/5 text-gray-500 border border-white/5 font-medium py-3 h-auto text-[10px] uppercase tracking-widest opacity-50">
-                Требуется ранг
-             </Button>
-        )}
       </div>
     </div>
   );

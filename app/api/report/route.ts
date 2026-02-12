@@ -12,9 +12,9 @@ export async function POST(req: Request) {
     }
 
     const body = await req.json();
-    const { contractType, itemName, quantity, proof, comment } = body;
+    const { userContractId, itemName, quantity, proof, comment } = body;
 
-    if (!contractType || !itemName || !quantity || !proof) {
+    if (!userContractId || !itemName || !quantity || !proof) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
 
@@ -27,15 +27,46 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    const report = await prisma.report.create({
-      data: {
+    // Verify user owns this contract and it's active
+    const userContract = await prisma.userContract.findFirst({
+      where: {
+        id: userContractId,
         userId: user.id,
-        contractType,
-        itemName,
-        quantity: parseInt(quantity),
-        proof,
-        comment,
+        status: 'ACTIVE',
       },
+      include: {
+        contract: true,
+      },
+    });
+
+    if (!userContract) {
+      return NextResponse.json({ error: "Contract not found or not active" }, { status: 404 });
+    }
+
+    // Create report and add creator as first participant in a transaction
+    const report = await prisma.$transaction(async (tx) => {
+      const newReport = await tx.report.create({
+        data: {
+          userId: user.id,
+          userContractId: userContract.id,
+          contractType: userContract.contract.title, // Use contract title as type
+          itemName,
+          quantity: parseInt(quantity),
+          proof,
+          comment,
+        },
+      });
+
+      // Automatically add creator as first participant
+      await tx.reportParticipant.create({
+        data: {
+          reportId: newReport.id,
+          userId: user.id,
+          share: 0, // Will be calculated on approval
+        },
+      });
+
+      return newReport;
     });
 
     return NextResponse.json({ success: true, report });

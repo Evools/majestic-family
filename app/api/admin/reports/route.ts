@@ -16,7 +16,14 @@ export async function GET(req: Request) {
       where: { status: "PENDING" }, // Using string for now if enum causes issues, but strict mode should use ReportStatus.PENDING
       include: {
         user: {
-          select: { name: true, image: true },
+          select: { name: true, image: true, firstName: true, lastName: true },
+        },
+        participants: {
+          include: {
+            user: {
+              select: { id: true, name: true, firstName: true, lastName: true, image: true },
+            },
+          },
         },
       },
       orderBy: { createdAt: "desc" },
@@ -51,19 +58,51 @@ export async function PUT(req: Request) {
         return NextResponse.json({ error: "Invalid value" }, { status: 400 });
       }
 
-      const userShare = totalValue * 0.6;
-      const familyShare = totalValue * 0.4;
+      // Get system settings for share percentages
+      const settings = await prisma.systemSettings.findFirst();
+      const userSharePercent = settings?.userSharePercent || 60;
+      const familySharePercent = settings?.familySharePercent || 40;
 
-      const report = await prisma.report.update({
-        where: { id: reportId },
-        data: {
-          status: 'APPROVED',
-          value: totalValue,
-          userShare,
-          familyShare,
-          verifierId: session.user.id,
-        },
+      const totalUserShare = totalValue * (userSharePercent / 100);
+      const familyShare = totalValue * (familySharePercent / 100);
+
+      // Get all participants for this report
+      const participants = await prisma.reportParticipant.findMany({
+        where: { reportId },
       });
+
+      if (participants.length === 0) {
+        return NextResponse.json({ error: "No participants found. Add at least one participant before approving." }, { status: 400 });
+      }
+
+      // Calculate individual share (split equally among participants)
+      const individualShare = totalUserShare / participants.length;
+
+      // Update report and create participant shares in a transaction
+      const report = await prisma.$transaction(async (tx) => {
+        // Update all participant shares
+        await Promise.all(
+          participants.map((participant) =>
+            tx.reportParticipant.update({
+              where: { id: participant.id },
+              data: { share: individualShare },
+            })
+          )
+        );
+
+        // Update report
+        return tx.report.update({
+          where: { id: reportId },
+          data: {
+            status: 'APPROVED',
+            value: totalValue,
+            userShare: totalUserShare,
+            familyShare,
+            verifierId: session.user.id,
+          },
+        });
+      });
+
       return NextResponse.json({ success: true, report });
 
     } else if (action === "reject") {
