@@ -8,10 +8,9 @@ interface ContractCardProps {
 }
 
 export function ContractCard({ contract }: ContractCardProps) {
-  const { title, description, reward, reputation, icon: iconName, level } = contract;
+  const { title, description, reward, reputation, icon: iconName, level, isActive } = contract;
   
-  // For now, all contracts from DB are active
-  const status = 'active';
+  const status: 'active' | 'locked' = isActive ? 'active' : 'locked';
   
   return (
     <div className={cn(
@@ -32,11 +31,6 @@ export function ContractCard({ contract }: ContractCardProps) {
         {status === 'active' && (
             <span className="px-2.5 py-1 rounded-md bg-green-500/10 border border-green-500/20 text-green-500 text-[10px] uppercase font-bold tracking-wider">
                 Доступно
-            </span>
-        )}
-         {status === 'completed' && (
-            <span className="px-2.5 py-1 rounded-md bg-blue-500/10 border border-blue-500/20 text-blue-500 text-[10px] uppercase font-bold tracking-wider">
-                Выполнено
             </span>
         )}
         {status === 'locked' && (
@@ -82,7 +76,7 @@ export function ContractCard({ contract }: ContractCardProps) {
         )}
          {status !== 'active' && (
              <Button disabled className="w-full bg-white/5 text-gray-500 border border-white/5 font-medium py-3 h-auto text-[10px] uppercase tracking-widest opacity-50">
-                {status === 'completed' ? 'Уже выполнено' : 'Требуется ранг'}
+                Требуется ранг
              </Button>
         )}
       </div>

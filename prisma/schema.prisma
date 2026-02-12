@@ -128,3 +128,32 @@ model DashboardSettings {
   updatedAt DateTime @updatedAt
   createdAt DateTime @default(now())
 }
+
+model SystemSettings {
+  id String @id @default(cuid())
+
+  // Family Info
+  familyName        String  @default("Shelby Family")
+  familyDescription String?
+  familyLogoUrl     String?
+
+  // Financial
+  userSharePercent   Int @default(60)
+  familySharePercent Int @default(40)
+  minWithdrawal      Int @default(10000)
+
+  // Contracts
+  contractCooldownHours Int     @default(24)
+  autoApproveReports    Boolean @default(false)
+
+  // Levels
+  xpMultiplier   Float @default(1.5)
+  baseXPRequired Int   @default(1000)
+
+  // Notifications
+  discordWebhook   String?
+  notifyNewReports Boolean @default(true)
+
+  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
+}
