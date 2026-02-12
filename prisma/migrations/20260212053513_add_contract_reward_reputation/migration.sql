@@ -1,0 +1,3 @@
+-- AlterTable
+ALTER TABLE "Contract" ADD COLUMN     "reputation" INTEGER NOT NULL DEFAULT 0,
+ADD COLUMN     "reward" INTEGER NOT NULL DEFAULT 0;

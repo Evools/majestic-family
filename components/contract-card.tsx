@@ -1,23 +1,17 @@
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { Clock, LucideIcon } from 'lucide-react';
-
-interface ContractProps {
-    title: string;
-    description: string;
-    reward: number;
-    xp?: number;
-    icon?: LucideIcon;
-    status?: 'active' | 'completed' | 'locked';
-    category?: string;
-}
+import { Contract } from '@prisma/client';
+import { ClipboardList } from 'lucide-react';
 
 interface ContractCardProps {
-    contract: ContractProps;
+    contract: Contract;
 }
 
 export function ContractCard({ contract }: ContractCardProps) {
-  const { title, description, reward, xp, icon: Icon, status = 'active' } = contract;
+  const { title, description, reward, reputation, icon: iconName, level } = contract;
+  
+  // For now, all contracts from DB are active
+  const status = 'active';
   
   return (
     <div className={cn(
@@ -32,7 +26,7 @@ export function ContractCard({ contract }: ContractCardProps) {
                 ? "bg-[#e81c5a]/10 text-[#e81c5a] border-[#e81c5a]/20" 
                 : "bg-white/5 text-gray-400 border-white/5"
         )}>
-          {Icon ? <Icon className="w-5 h-5" /> : <Clock className="w-5 h-5" />}
+          <ClipboardList className="w-5 h-5" />
         </div>
         
         {status === 'active' && (
@@ -54,11 +48,16 @@ export function ContractCard({ contract }: ContractCardProps) {
       
       {/* Content */}
       <div className="flex-grow">
-        <h3 className="text-xl font-bold text-white mb-2 leading-tight">
-            {title}
-        </h3>
+        <div className="flex items-center gap-2 mb-2">
+          <h3 className="text-xl font-bold text-white leading-tight">
+              {title}
+          </h3>
+          <span className="px-2 py-0.5 rounded bg-[#e81c5a]/10 text-[#e81c5a] text-[10px] font-bold border border-[#e81c5a]/20">
+            LVL {level}
+          </span>
+        </div>
         <p className="text-gray-400 text-sm leading-relaxed mb-4">
-          {description}
+          {description || 'Нет описания'}
         </p>
       </div>
       
@@ -70,12 +69,10 @@ export function ContractCard({ contract }: ContractCardProps) {
                 <span className="text-white font-bold font-mono text-lg">${reward.toLocaleString('en-US')}</span>
             </div>
             
-            {xp && (
-                <div className="flex flex-col items-end">
-                    <span className="text-[10px] text-gray-500 uppercase tracking-wider font-semibold mb-1">Репутация</span>
-                    <span className="text-[#e81c5a] font-bold font-mono text-lg drop-shadow-[0_0_8px_rgba(232,28,90,0.3)]">+{xp} XP</span>
-                </div>
-            )}
+            <div className="flex flex-col items-end">
+                <span className="text-[10px] text-gray-500 uppercase tracking-wider font-semibold mb-1">Репутация</span>
+                <span className="text-[#e81c5a] font-bold font-mono text-lg drop-shadow-[0_0_8px_rgba(232,28,90,0.3)]">+{reputation} XP</span>
+            </div>
         </div>
 
         {status === 'active' && (

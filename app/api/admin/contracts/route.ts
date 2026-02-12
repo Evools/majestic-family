@@ -26,7 +26,7 @@ export async function POST(req: Request) {
     }
 
     const body = await req.json();
-    const { title, description, icon, level } = body;
+    const { title, description, icon, level, reward, reputation } = body;
 
     if (!title || !level) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
@@ -36,6 +36,8 @@ export async function POST(req: Request) {
       data: {
         title,
         description,
+        reward: reward ? parseInt(reward) : 0,
+        reputation: reputation ? parseInt(reputation) : 0,
         icon: icon || "ClipboardList",
         level: parseInt(level),
         isActive: true,
@@ -59,7 +61,7 @@ export async function PUT(req: Request) {
     }
 
     const body = await req.json();
-    const { id, title, description, icon, level, isActive } = body;
+    const { id, title, description, icon, level, reward, reputation, isActive } = body;
 
     if (!id) {
       return NextResponse.json({ error: "Missing ID" }, { status: 400 });
@@ -70,6 +72,8 @@ export async function PUT(req: Request) {
       data: {
         title,
         description,
+        reward: reward ? parseInt(reward) : undefined,
+        reputation: reputation ? parseInt(reputation) : undefined,
         icon,
         level: level ? parseInt(level) : undefined,
         isActive,

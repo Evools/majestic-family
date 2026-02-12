@@ -96,6 +96,8 @@ model Contract {
   id          String   @id @default(cuid())
   title       String
   description String?
+  reward      Int      @default(0) // Money reward in dollars
+  reputation  Int      @default(0) // XP/reputation points
   icon        String   @default("ClipboardList") // Lucide icon name
   level       Int      @default(1)
   isActive    Boolean  @default(true)

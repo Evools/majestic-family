@@ -17,6 +17,8 @@ export default function AdminContractsPage() {
   const [formData, setFormData] = useState({
     title: '',
     description: '',
+    reward: '0',
+    reputation: '0',
     level: '1',
     icon: 'ClipboardList',
   });
@@ -76,6 +78,8 @@ export default function AdminContractsPage() {
     setFormData({
       title: contract.title,
       description: contract.description || '',
+      reward: contract.reward?.toString() || '0',
+      reputation: contract.reputation?.toString() || '0',
       level: contract.level.toString(),
       icon: contract.icon,
     });
@@ -84,7 +88,7 @@ export default function AdminContractsPage() {
   };
 
   const resetForm = () => {
-    setFormData({ title: '', description: '', level: '1', icon: 'ClipboardList' });
+    setFormData({ title: '', description: '', reward: '0', reputation: '0', level: '1', icon: 'ClipboardList' });
     setEditingId(null);
     setIsCreating(false);
   };
@@ -147,6 +151,28 @@ export default function AdminContractsPage() {
                             onChange={e => setFormData({...formData, description: e.target.value})}
                             className="bg-[#0f0f0f] border-[#1f1f1f] text-white"
                         />
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                            <label className="text-xs font-medium text-gray-400 uppercase tracking-wide">Награда ($)</label>
+                            <Input 
+                                type="number"
+                                placeholder="150000" 
+                                value={formData.reward}
+                                onChange={e => setFormData({...formData, reward: e.target.value})}
+                                className="bg-[#0f0f0f] border-[#1f1f1f] text-white"
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-xs font-medium text-gray-400 uppercase tracking-wide">Репутация (XP)</label>
+                            <Input 
+                                type="number"
+                                placeholder="200" 
+                                value={formData.reputation}
+                                onChange={e => setFormData({...formData, reputation: e.target.value})}
+                                className="bg-[#0f0f0f] border-[#1f1f1f] text-white"
+                            />
+                        </div>
                     </div>
                     <div className="flex justify-end gap-2 pt-2">
                         <Button type="button" variant="ghost" className="text-gray-400 hover:text-white" onClick={resetForm}>Отмена</Button>
