@@ -248,7 +248,6 @@ export default function ContractsPage() {
               return (
                 <Card key={contract.id} className={`group relative h-full bg-[#0a0a0a] border-[#1f1f1f] hover:border-[#e81c5a]/20 transition-all duration-300 ${isActive || cooldown || isFull || alreadyParticipated ? 'opacity-60 grayscale-[0.5]' : ''}`}>
                   <CardContent className="p-6 flex flex-col h-full">
-                    {/* Slots Progress */}
                     <div className="mb-6 space-y-2.5">
                        <div className="flex items-center justify-between text-[9px] font-bold uppercase tracking-widest leading-none">
                           <div className="flex items-center gap-1.5 text-gray-500">
