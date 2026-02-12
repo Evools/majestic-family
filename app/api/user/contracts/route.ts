@@ -80,11 +80,13 @@ export async function GET() {
 
     const settings = await prisma.systemSettings.findFirst();
     const cooldownHours = settings?.contractCooldownHours ?? 24;
+    const maxActiveContracts = settings?.maxActiveContracts ?? 10;
 
     return NextResponse.json({
       active,
       completed,
       cooldownHours,
+      maxActiveContracts,
       availableContracts: contractsWithCycle
     });
   } catch (error) {
@@ -177,28 +179,38 @@ export async function POST(req: Request) {
     }
 
     // Check if user already has this contract active
-    const existingActive = await prisma.userContract.findFirst({
+    const activeCountList = await prisma.userContract.findMany({
       where: {
         userId: user.id,
-        contractId,
         status: 'ACTIVE',
       },
+      include: {
+        contract: true
+      }
     });
 
-    if (existingActive) {
+    const isAlreadyActive = activeCountList.some(uc => uc.contractId === contractId);
+    if (isAlreadyActive) {
       return NextResponse.json({ error: "You already have this contract active" }, { status: 400 });
     }
 
-    // Check active contract limit (max 3)
-    const activeCount = await prisma.userContract.count({
-      where: {
-        userId: user.id,
-        status: 'ACTIVE',
-      },
-    });
+    // Check category restriction: only ONE active contract per category
+    if (contract.category && contract.category !== "General") {
+      const sameCategoryActive = activeCountList.some(uc => uc.contract.category === contract.category);
+      if (sameCategoryActive) {
+        return NextResponse.json({ 
+          error: "Category limit reached", 
+          message: `У вас уже есть активный контракт в категории "${contract.category}". Завершите его, прежде чем брать новый этого же типа.` 
+        }, { status: 400 });
+      }
+    }
 
-    if (activeCount >= 3) {
-      return NextResponse.json({ error: "Maximum 3 active contracts allowed" }, { status: 400 });
+    // Check active contract limit
+    const settings = await prisma.systemSettings.findFirst();
+    const maxActiveContracts = settings?.maxActiveContracts ?? 10;
+
+    if (activeCountList.length >= maxActiveContracts) {
+      return NextResponse.json({ error: `Maximum ${maxActiveContracts} active contracts allowed` }, { status: 400 });
     }
 
     // Create user contract

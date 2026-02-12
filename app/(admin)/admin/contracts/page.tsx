@@ -22,8 +22,9 @@ export default function AdminContractsPage() {
     reputation: '0',
     level: '1',
     icon: 'ClipboardList',
-    maxSlots: '1',
+    maxSlots: '10',
     isFlexible: false,
+    category: 'General',
   });
 
   useEffect(() => {
@@ -81,19 +82,20 @@ export default function AdminContractsPage() {
     setFormData({
       title: contract.title,
       description: contract.description || '',
-      reward: contract.reward?.toString() || '0',
-      reputation: contract.reputation?.toString() || '0',
+      reward: contract.reward.toString(),
+      reputation: contract.reputation.toString(),
       level: contract.level.toString(),
       icon: contract.icon,
-      maxSlots: contract.maxSlots?.toString() || '1',
+      maxSlots: contract.maxSlots.toString(),
       isFlexible: contract.isFlexible,
+      category: contract.category,
     });
     setEditingId(contract.id);
     setIsCreating(true);
   };
 
   const resetForm = () => {
-    setFormData({ title: '', description: '', reward: '0', reputation: '0', level: '1', icon: 'ClipboardList', maxSlots: '1', isFlexible: false });
+    setFormData({ title: '', description: '', reward: '0', reputation: '0', level: '1', icon: 'ClipboardList', maxSlots: '10', isFlexible: false, category: 'General' });
     setEditingId(null);
     setIsCreating(false);
   };
@@ -136,13 +138,12 @@ export default function AdminContractsPage() {
                                 className="bg-[#0f0f0f] border-[#1f1f1f] text-white"
                             />
                         </div>
-                         <div className="space-y-2">
-                            <label className="text-xs font-medium text-gray-400 uppercase tracking-wide">Уровень</label>
+                        <div className="space-y-2">
+                            <label className="text-xs font-medium text-gray-400 uppercase tracking-wide">Категория</label>
                             <Input 
-                                type="number"
-                                placeholder="1-10" 
-                                value={formData.level}
-                                onChange={e => setFormData({...formData, level: e.target.value})}
+                                placeholder="Рыбалка, Охота и т.д." 
+                                value={formData.category}
+                                onChange={e => setFormData({...formData, category: e.target.value})}
                                 required
                                 className="bg-[#0f0f0f] border-[#1f1f1f] text-white"
                             />
@@ -231,6 +232,7 @@ export default function AdminContractsPage() {
                         ) : (
                             <span>Ёмкость: {contract.maxSlots} чел.</span>
                         )}
+                        <span className="ml-auto text-[#e81c5a]/60">{contract.category}</span>
                     </div>
                 </CardContent>
              </Card>

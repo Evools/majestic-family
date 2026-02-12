@@ -29,6 +29,7 @@ export default function ContractsPage() {
   const [activeContracts, setActiveContracts] = useState<UserContractWithContract[]>([]);
   const [completedContracts, setCompletedContracts] = useState<UserContractWithContract[]>([]);
   const [cooldownHours, setCooldownHours] = useState<number>(24);
+  const [maxActiveContracts, setMaxActiveContracts] = useState<number>(10);
   const [loading, setLoading] = useState(true);
   const [takingContract, setTakingContract] = useState<string | null>(null);
   const [cancellingContract, setCancellingContract] = useState<string | null>(null);
@@ -47,6 +48,7 @@ export default function ContractsPage() {
         setActiveContracts(data.active || []);
         setCompletedContracts(data.completed || []);
         setCooldownHours(data.cooldownHours || 24);
+        setMaxActiveContracts(data.maxActiveContracts || 10);
         setContracts(data.availableContracts || []);
       }
     } catch (error) {
@@ -152,7 +154,7 @@ export default function ContractsPage() {
               </div>
               <h2 className="text-xl font-bold text-white tracking-tight">Ваши задания</h2>
             </div>
-            <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">{activeContracts.length} / 3 активно</span>
+            <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">{activeContracts.length} / {maxActiveContracts} активно</span>
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -309,7 +311,7 @@ export default function ContractsPage() {
                             : 'bg-[#e81c5a] hover:bg-[#c21548] text-white shadow-lg shadow-[#e81c5a]/5'
                         }`}
                         onClick={() => handleTakeContract(contract.id)}
-                        disabled={isActive || !!cooldown || isTaking || activeContracts.length >= 3 || isFull || alreadyParticipated}
+                        disabled={isActive || !!cooldown || isTaking || activeContracts.length >= maxActiveContracts || isFull || alreadyParticipated}
                       >
                         {isTaking ? (
                           <div className="flex items-center gap-2">
@@ -327,8 +329,8 @@ export default function ContractsPage() {
                           'Мест нет'
                         ) : alreadyParticipated ? (
                           'Выполнено'
-                        ) : activeContracts.length >= 3 ? (
-                          'Лимит 3/3'
+                        ) : activeContracts.length >= maxActiveContracts ? (
+                          `Лимит ${maxActiveContracts}/${maxActiveContracts}`
                         ) : (
                           'Взять контракт'
                         )}

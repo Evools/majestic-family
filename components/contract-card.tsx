@@ -19,6 +19,11 @@ export function ContractCard({ contract }: ContractCardProps) {
             <span className="shrink-0 px-1.5 py-0.5 rounded bg-white/5 border border-white/10 text-gray-500 text-[8px] font-bold uppercase tracking-wider">
               LVL {level}
             </span>
+            {contract.category && contract.category !== "General" && (
+              <span className="shrink-0 px-1.5 py-0.5 rounded bg-[#e81c5a]/10 border border-[#e81c5a]/20 text-[#e81c5a] text-[8px] font-bold uppercase tracking-wider">
+                {contract.category}
+              </span>
+            )}
           </div>
           <p className="text-gray-500 text-[11px] font-normal leading-relaxed line-clamp-2">
             {description || 'Спецификации контракта не указаны'}
