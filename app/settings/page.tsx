@@ -13,7 +13,11 @@ export default function SettingsPage() {
   const router = useRouter();
   
   // Initialize state with session data or empty strings
-  const user = session?.user as any;
+  const user = session?.user as { 
+    firstName?: string; 
+    lastName?: string; 
+    staticId?: string;
+  } | undefined;
 
   const [formData, setFormData] = useState({
     firstName: user?.firstName || "",
@@ -55,8 +59,8 @@ export default function SettingsPage() {
       setSuccess(true);
       router.refresh();
       
-    } catch (error: any) {
-      setErrorMsg(error.message);
+    } catch (error: unknown) {
+      setErrorMsg(error instanceof Error ? error.message : 'Failed to update settings');
     } finally {
       setLoading(false);
     }
