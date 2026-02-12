@@ -35,6 +35,7 @@ export default function ContractsPage() {
   const [cancellingContract, setCancellingContract] = useState<string | null>(null);
   const [confirmCancelId, setConfirmCancelId] = useState<string | null>(null);
   const [cancelError, setCancelError] = useState<string | null>(null);
+  const [errorModal, setErrorModal] = useState<{ title: string; message: string } | null>(null);
 
   useEffect(() => {
     fetchData();
@@ -72,11 +73,17 @@ export default function ContractsPage() {
         await fetchData();
       } else {
         const error = await res.json();
-        alert(error.error || 'Failed to take contract');
+        setErrorModal({
+          title: error.error || 'Ошибка',
+          message: error.message || 'Не удалось взять контракт'
+        });
       }
     } catch (error) {
       console.error('Error taking contract:', error);
-      alert('Failed to take contract');
+      setErrorModal({
+        title: 'Ошибка',
+        message: 'Произошла непредвиденная ошибка при попытке взять контракт.'
+      });
     } finally {
       setTakingContract(null);
     }
@@ -408,6 +415,34 @@ export default function ContractsPage() {
                   {cancellingContract === confirmCancelId ? '...' : 'Расторгнуть'}
                 </Button>
               </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+      {/* Error Modal */}
+      {errorModal && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-[60] p-4 animate-in fade-in duration-300">
+          <Card className="max-w-md w-full bg-[#0a0a0a] border border-[#1f1f1f] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300">
+            <div className="h-1 w-full bg-[#e81c5a]/50" />
+            <CardContent className="p-8">
+              <div className="flex flex-col items-center text-center mb-8">
+                <div className="w-16 h-16 rounded-2xl bg-[#e81c5a]/5 border border-[#e81c5a]/10 flex items-center justify-center mb-4 text-[#e81c5a]">
+                  <AlertCircle className="w-8 h-8" />
+                </div>
+                <h3 className="text-xl font-bold text-white uppercase tracking-tight mb-3">
+                  {errorModal.title === 'Category limit reached' ? 'Лимит категории' : errorModal.title}
+                </h3>
+                <p className="text-gray-400 text-sm leading-relaxed">
+                  {errorModal.message}
+                </p>
+              </div>
+
+              <Button
+                className="w-full h-11 bg-white/5 hover:bg-white/10 border border-white/10 text-[10px] font-bold uppercase tracking-widest text-white transition-all"
+                onClick={() => setErrorModal(null)}
+              >
+                Понятно
+              </Button>
             </CardContent>
           </Card>
         </div>
