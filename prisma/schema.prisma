@@ -54,6 +54,10 @@ model User {
   email           String?   @unique
   emailVerified   DateTime?
   image           String?
+  firstName       String?
+  lastName        String?
+  staticId        String?   @unique
+  lastActiveAt    DateTime?
   role            Role      @default(MEMBER)
   accounts        Account[]
   sessions        Session[]

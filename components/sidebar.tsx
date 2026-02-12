@@ -1,13 +1,14 @@
 'use client';
 
+import { OnlineUsers } from '@/components/online-users';
 import { cn } from '@/lib/utils';
 import {
-  ClipboardList,
-  LayoutDashboard,
-  LogOut,
-  Send,
-  Settings,
-  Users
+    ClipboardList,
+    LayoutDashboard,
+    LogOut,
+    Send,
+    Settings,
+    Users
 } from 'lucide-react';
 import { signOut, useSession } from 'next-auth/react';
 import Link from 'next/link';
@@ -77,10 +78,16 @@ export function Sidebar() {
             </Link>
         )}
 
-        <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-400 hover:text-white hover:bg-white/5 transition-all group">
+        <Link 
+          href="/settings"
+          className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-400 hover:text-white hover:bg-white/5 transition-all group"
+        >
           <Settings className="w-5 h-5 text-gray-500 group-hover:text-white" />
           Настройки
-        </button>
+        </Link>
+        <div className="pt-6 px-3">
+          <OnlineUsers />
+        </div>
       </nav>
 
       {/* User Profile */}
