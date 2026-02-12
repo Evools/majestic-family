@@ -113,7 +113,7 @@ export async function PUT(req: Request) {
         );
 
         // Update report
-        return tx.report.update({
+        const updatedReport = await tx.report.update({
           where: { id: reportId },
           data: {
             status: 'APPROVED',
@@ -122,7 +122,55 @@ export async function PUT(req: Request) {
             familyShare,
             verifierId: session.user.id,
           },
+          include: {
+            userContract: {
+              include: {
+                contract: true
+              }
+            }
+          }
         });
+
+        // Global Cooldown Logic: Check if all slots are completed
+        const userContract = updatedReport.userContract;
+        if (userContract) {
+          const contract = userContract.contract;
+
+          // Count completed user contracts for this contract in the current cycle
+          // We define a cycle by looking at contracts completed after the last cooldown period ended
+          const cycleStartTime = contract.cooldownUntil || new Date(0);
+
+          const completedCount = await tx.userContract.count({
+            where: {
+              contractId: contract.id,
+              status: 'COMPLETED',
+              completedAt: { gt: cycleStartTime }
+            }
+          });
+
+          const activeCount = await tx.userContract.count({
+            where: {
+              contractId: contract.id,
+              status: 'ACTIVE',
+              startedAt: { gt: cycleStartTime }
+            }
+          });
+
+          // If we've reached max slots and no one is active anymore, start the global cooldown
+          if (completedCount >= contract.maxSlots && activeCount === 0) {
+            const settings = await tx.systemSettings.findFirst();
+            const cooldownHours = settings?.contractCooldownHours ?? 24;
+
+            await tx.contract.update({
+              where: { id: contract.id },
+              data: {
+                cooldownUntil: new Date(Date.now() + cooldownHours * 60 * 60 * 1000)
+              }
+            });
+          }
+        }
+
+        return updatedReport;
       });
 
       return NextResponse.json({ success: true, report });

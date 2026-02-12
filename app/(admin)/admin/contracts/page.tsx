@@ -21,6 +21,7 @@ export default function AdminContractsPage() {
     reputation: '0',
     level: '1',
     icon: 'ClipboardList',
+    maxSlots: '1',
   });
 
   useEffect(() => {
@@ -82,13 +83,14 @@ export default function AdminContractsPage() {
       reputation: contract.reputation?.toString() || '0',
       level: contract.level.toString(),
       icon: contract.icon,
+      maxSlots: contract.maxSlots?.toString() || '1',
     });
     setEditingId(contract.id);
     setIsCreating(true);
   };
 
   const resetForm = () => {
-    setFormData({ title: '', description: '', reward: '0', reputation: '0', level: '1', icon: 'ClipboardList' });
+    setFormData({ title: '', description: '', reward: '0', reputation: '0', level: '1', icon: 'ClipboardList', maxSlots: '1' });
     setEditingId(null);
     setIsCreating(false);
   };
@@ -173,6 +175,16 @@ export default function AdminContractsPage() {
                                 className="bg-[#0f0f0f] border-[#1f1f1f] text-white"
                             />
                         </div>
+                        <div className="space-y-2">
+                            <label className="text-xs font-medium text-gray-400 uppercase tracking-wide">Нужно людей</label>
+                            <Input 
+                                type="number"
+                                placeholder="10" 
+                                value={formData.maxSlots}
+                                onChange={e => setFormData({...formData, maxSlots: e.target.value})}
+                                className="bg-[#0f0f0f] border-[#1f1f1f] text-white"
+                            />
+                        </div>
                     </div>
                     <div className="flex justify-end gap-2 pt-2">
                         <Button type="button" variant="ghost" className="text-gray-400 hover:text-white" onClick={resetForm}>Отмена</Button>
@@ -199,7 +211,10 @@ export default function AdminContractsPage() {
                         {/* Icon placeholder logic could be improved to dynamic render */}
                     </div>
                     <h3 className="text-xl font-bold text-white mb-2">{contract.title}</h3>
-                    <p className="text-sm text-gray-500">{contract.description || 'Нет описания'}</p>
+                    <p className="text-sm text-gray-500 mb-4">{contract.description || 'Нет описания'}</p>
+                    <div className="flex items-center gap-2 text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                        <span>Ёмкость: {contract.maxSlots} чел.</span>
+                    </div>
                 </CardContent>
              </Card>
           ))}

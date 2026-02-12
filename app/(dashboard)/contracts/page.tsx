@@ -4,7 +4,7 @@ import { ContractCard } from '@/components/contract-card';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Contract } from '@prisma/client';
-import { AlertCircle, Briefcase, Check, History, X } from 'lucide-react';
+import { AlertCircle, Briefcase, Check, Clock, History, Users, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 type UserContractWithContract = {
@@ -12,13 +12,18 @@ type UserContractWithContract = {
   contractId: string;
   status: string;
   startedAt: string;
-  contract: Contract;
+  completedAt: string | null;
+  contract: Contract & { maxSlots: number; cycleCount: number };
+  reports: { status: string; id: string }[];
 };
 
+type GlobalContract = Contract & { cycleCount: number };
+
 export default function ContractsPage() {
-  const [contracts, setContracts] = useState<Contract[]>([]);
+  const [contracts, setContracts] = useState<GlobalContract[]>([]);
   const [activeContracts, setActiveContracts] = useState<UserContractWithContract[]>([]);
   const [completedContracts, setCompletedContracts] = useState<UserContractWithContract[]>([]);
+  const [cooldownHours, setCooldownHours] = useState<number>(24);
   const [loading, setLoading] = useState(true);
   const [takingContract, setTakingContract] = useState<string | null>(null);
   const [cancellingContract, setCancellingContract] = useState<string | null>(null);
@@ -31,19 +36,13 @@ export default function ContractsPage() {
 
   const fetchData = async () => {
     try {
-      // Fetch all contracts
-      const contractsRes = await fetch('/api/admin/contracts');
-      if (contractsRes.ok) {
-        const data = await contractsRes.json();
-        setContracts(data.filter((c: Contract) => c.isActive));
-      }
-
-      // Fetch user's contracts
       const userContractsRes = await fetch('/api/user/contracts');
       if (userContractsRes.ok) {
         const data = await userContractsRes.json();
         setActiveContracts(data.active || []);
         setCompletedContracts(data.completed || []);
+        setCooldownHours(data.cooldownHours || 24);
+        setContracts(data.availableContracts || []);
       }
     } catch (error) {
       console.error('Failed to fetch data:', error);
@@ -105,6 +104,28 @@ export default function ContractsPage() {
     return activeContracts.some(uc => uc.contractId === contractId);
   };
 
+  const getCooldownRemaining = (contractId: string) => {
+    const lastContract = completedContracts
+      .filter(uc => uc.contractId === contractId && uc.completedAt)
+      .sort((a, b) => new Date(b.completedAt!).getTime() - new Date(a.completedAt!).getTime())[0];
+
+    if (!lastContract || !lastContract.completedAt) return null;
+
+    const now = new Date();
+    const completionDate = new Date(lastContract.completedAt);
+    const cooldownMs = cooldownHours * 60 * 60 * 1000;
+    const elapsedMs = now.getTime() - completionDate.getTime();
+
+    if (elapsedMs < cooldownMs) {
+      const remainingMs = cooldownMs - elapsedMs;
+      const hours = Math.floor(remainingMs / (60 * 60 * 1000));
+      const minutes = Math.floor((remainingMs % (60 * 60 * 1000)) / (60 * 1000));
+      return { hours, minutes };
+    }
+
+    return null;
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -136,11 +157,13 @@ export default function ContractsPage() {
               return (
                 <Card key={uc.id} className="group h-full bg-[#0a0a0a] border-blue-500/30">
                   <CardContent className="p-5">
-                    {/* Active Badge */}
+                    {/* Active Badge / Report Status */}
                     <div className="flex items-center justify-between mb-3">
                       <div className="flex items-center gap-2 px-2.5 py-1 rounded-lg bg-blue-500/10 border border-blue-500/20">
                         <Check className="w-3.5 h-3.5 text-blue-500" />
-                        <span className="text-xs font-bold text-blue-500 uppercase tracking-wide">Активен</span>
+                        <span className="text-xs font-bold text-blue-500 uppercase tracking-wide">
+                          {uc.reports.length > 0 ? 'Отчет отправлен' : 'Активен'}
+                        </span>
                       </div>
                     </div>
 
@@ -187,20 +210,29 @@ export default function ContractsPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {contracts.map((contract) => {
               const isActive = isContractActive(contract.id);
+              const cooldown = getCooldownRemaining(contract.id);
               const isTaking = takingContract === contract.id;
 
               return (
-                <Card key={contract.id} className={`group h-full ${isActive ? 'opacity-50' : ''}`}>
+                <Card key={contract.id} className={`group h-full ${isActive || cooldown ? 'opacity-50' : ''}`}>
                   <CardContent className="p-5">
+                    <div className="flex items-center justify-between mb-3">
+                       <div className="flex items-center gap-1.5 px-2 py-0.5 rounded bg-white/5 border border-white/10">
+                          <Users className="w-3 h-3 text-gray-400" />
+                          <span className="text-[10px] font-bold text-gray-400 leading-none">
+                            {contract.cycleCount}/{contract.maxSlots}
+                          </span>
+                       </div>
+                    </div>
                     <ContractCard contract={contract} />
                     <Button
                       className={`w-full mt-4 ${
-                        isActive
+                        isActive || cooldown || contract.cycleCount >= contract.maxSlots
                           ? 'bg-gray-700 cursor-not-allowed'
                           : 'bg-[#e81c5a] hover:bg-[#c21548]'
                       }`}
                       onClick={() => handleTakeContract(contract.id)}
-                      disabled={isActive || isTaking || activeContracts.length >= 3}
+                      disabled={isActive || !!cooldown || isTaking || activeContracts.length >= 3 || contract.cycleCount >= contract.maxSlots}
                     >
                       {isTaking ? (
                         'Загрузка...'
@@ -209,6 +241,13 @@ export default function ContractsPage() {
                           <Check className="w-4 h-4 mr-2" />
                           Уже взят
                         </>
+                      ) : cooldown ? (
+                        <>
+                          <Clock className="w-4 h-4 mr-2" />
+                          Перезарядка {cooldown.hours}ч {cooldown.minutes}м
+                        </>
+                      ) : contract.cycleCount >= contract.maxSlots ? (
+                        'Мест нет'
                       ) : activeContracts.length >= 3 ? (
                         'Лимит достигнут'
                       ) : (

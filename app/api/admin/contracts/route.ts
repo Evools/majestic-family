@@ -26,7 +26,7 @@ export async function POST(req: Request) {
     }
 
     const body = await req.json();
-    const { title, description, icon, level, reward, reputation } = body;
+    const { title, description, icon, level, reward, reputation, maxSlots } = body;
 
     if (!title || !level) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
@@ -41,6 +41,7 @@ export async function POST(req: Request) {
         icon: icon || "ClipboardList",
         level: parseInt(level),
         isActive: true,
+        maxSlots: maxSlots ? parseInt(maxSlots) : 1,
       },
     });
 
@@ -61,7 +62,7 @@ export async function PUT(req: Request) {
     }
 
     const body = await req.json();
-    const { id, title, description, icon, level, reward, reputation, isActive } = body;
+    const { id, title, description, icon, level, reward, reputation, isActive, maxSlots } = body;
 
     if (!id) {
       return NextResponse.json({ error: "Missing ID" }, { status: 400 });
@@ -77,6 +78,7 @@ export async function PUT(req: Request) {
         icon,
         level: level ? parseInt(level) : undefined,
         isActive,
+        maxSlots: maxSlots ? parseInt(maxSlots) : undefined,
       },
     });
 

@@ -123,6 +123,8 @@ model Contract {
   icon          String         @default("ClipboardList")
   level         Int            @default(1)
   isActive      Boolean        @default(true)
+  maxSlots      Int            @default(1)
+  cooldownUntil DateTime?
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
   userContracts UserContract[]

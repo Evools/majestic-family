@@ -12,6 +12,23 @@ export async function GET() {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    // For each contract, we want to know its current cycle status
+    const allContracts = await prisma.contract.findMany({
+      where: { isActive: true }
+    });
+
+    const contractsWithCycle = await Promise.all(allContracts.map(async (c) => {
+      const cycleStartTime = c.cooldownUntil || new Date(0);
+      const cycleCount = await prisma.userContract.count({
+        where: {
+          contractId: c.id,
+          status: { in: ['ACTIVE', 'COMPLETED'] },
+          startedAt: { gt: cycleStartTime }
+        }
+      });
+      return { ...c, cycleCount };
+    }));
+
     // Find the user
     const user = await prisma.user.findUnique({
       where: { email: session.user.email },
@@ -21,11 +38,14 @@ export async function GET() {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    // Get user's contracts
+    // Get user's contracts with report status
     const userContracts = await prisma.userContract.findMany({
       where: { userId: user.id },
       include: {
         contract: true,
+        reports: {
+          select: { status: true, id: true }
+        }
       },
       orderBy: { startedAt: 'desc' },
     });
@@ -34,7 +54,15 @@ export async function GET() {
     const active = userContracts.filter(uc => uc.status === 'ACTIVE');
     const completed = userContracts.filter(uc => uc.status === 'COMPLETED');
 
-    return NextResponse.json({ active, completed });
+    const settings = await prisma.systemSettings.findFirst();
+    const cooldownHours = settings?.contractCooldownHours ?? 24;
+
+    return NextResponse.json({
+      active,
+      completed,
+      cooldownHours,
+      availableContracts: contractsWithCycle
+    });
   } catch (error) {
     console.error("Error fetching user contracts:", error);
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
@@ -76,6 +104,36 @@ export async function POST(req: Request) {
 
     if (!contract.isActive) {
       return NextResponse.json({ error: "Contract is not active" }, { status: 400 });
+    }
+
+    // NEW: Global Cooldown Check
+    if (contract.cooldownUntil && new Date() < contract.cooldownUntil) {
+      const remainingMs = contract.cooldownUntil.getTime() - Date.now();
+      const hours = Math.floor(remainingMs / (60 * 60 * 1000));
+      const minutes = Math.floor((remainingMs % (60 * 60 * 1000)) / (60 * 1000));
+
+      return NextResponse.json({
+        error: "Contract is on global cooldown",
+        remainingTime: remainingMs,
+        message: `Контракт на глобальной перезарядке. Доступен через ${hours}ч ${minutes}м.`
+      }, { status: 400 });
+    }
+
+    // NEW: Global Slots Check
+    const cycleStartTime = contract.cooldownUntil || new Date(0);
+    const cycleParticipantsCount = await prisma.userContract.count({
+      where: {
+        contractId,
+        status: { in: ['ACTIVE', 'COMPLETED'] }, // Cancelled doesn't count
+        startedAt: { gt: cycleStartTime }
+      }
+    });
+
+    if (cycleParticipantsCount >= contract.maxSlots) {
+      return NextResponse.json({
+        error: "Contract is full",
+        message: "Все доступные места на этот цикл заняты. Дождитесь завершения выполнения всеми участниками или следующего цикла."
+      }, { status: 400 });
     }
 
     // Check if user already has this contract active
