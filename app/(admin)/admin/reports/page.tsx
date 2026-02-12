@@ -68,11 +68,20 @@ export default function AdminReportsPage() {
     }
   };
 
-  if (loading) return <div className="text-white">Loading...</div>;
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <p className="text-gray-400">Загрузка...</p>
+      </div>
+    );
+  }
 
   return (
-    <div className="space-y-6">
-      <h1 className="text-3xl font-bold text-white">Проверка отчетов</h1>
+    <div className="space-y-8">
+      <div>
+        <h1 className="text-3xl font-bold text-white mb-2">Проверка отчетов</h1>
+        <p className="text-gray-400">Одобрение и отклонение отчетов участников.</p>
+      </div>
       
       {reports.length === 0 ? (
         <Card className="bg-[#0a0a0a] border border-[#1f1f1f]">

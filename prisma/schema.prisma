@@ -102,3 +102,27 @@ model Contract {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }
+
+model DashboardSettings {
+  id               String  @id @default(cuid())
+  // Active Bonus
+  bonusActive      Boolean @default(false)
+  bonusTitle       String?
+  bonusDescription String?
+
+  // Family Balance
+  familyBalance Float @default(0)
+
+  // Financial Goal
+  goalName    String?
+  goalTarget  Float?
+  goalCurrent Float?
+
+  // Family Level
+  familyLevel      Int @default(1)
+  familyXP         Int @default(0)
+  familyXPRequired Int @default(1000)
+
+  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
+}

@@ -89,49 +89,67 @@ export default function AdminContractsPage() {
     setIsCreating(false);
   };
 
-  if (loading) return <div className="text-white">Loading...</div>;
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <p className="text-gray-400">Загрузка...</p>
+      </div>
+    );
+  }
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold text-white">Управление контрактами</h1>
-        <Button onClick={() => setIsCreating(true)} className="bg-[#e81c5a] hover:bg-[#c21548]">
+    <div className="space-y-8">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div>
+          <h1 className="text-3xl font-bold text-white mb-2">Управление контрактами</h1>
+          <p className="text-gray-400">Создание и редактирование доступных контрактов.</p>
+        </div>
+        <Button onClick={() => setIsCreating(true)} className="bg-[#e81c5a] hover:bg-[#c21548] shadow-lg shadow-[#e81c5a]/20">
             <Plus className="w-4 h-4 mr-2" /> Добавить
         </Button>
       </div>
 
       {isCreating && (
-        <Card className="bg-[#1a1a1a] border border-[#2f2f2f] mb-6 animate-in fade-in slide-in-from-top-4">
+        <Card className="bg-[#0a0a0a] border border-[#1f1f1f] animate-in fade-in slide-in-from-top-4">
             <CardHeader>
                 <CardTitle className="text-white text-lg">{editingId ? 'Редактировать контракт' : 'Новый контракт'}</CardTitle>
             </CardHeader>
             <CardContent>
                 <form onSubmit={handleSubmit} className="space-y-4">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                            <label className="text-xs font-medium text-gray-400 uppercase tracking-wide">Название</label>
+                            <Input 
+                                placeholder="Рыбалка" 
+                                value={formData.title}
+                                onChange={e => setFormData({...formData, title: e.target.value})}
+                                required
+                                className="bg-[#0f0f0f] border-[#1f1f1f] text-white"
+                            />
+                        </div>
+                         <div className="space-y-2">
+                            <label className="text-xs font-medium text-gray-400 uppercase tracking-wide">Уровень</label>
+                            <Input 
+                                type="number"
+                                placeholder="1-10" 
+                                value={formData.level}
+                                onChange={e => setFormData({...formData, level: e.target.value})}
+                                required
+                                className="bg-[#0f0f0f] border-[#1f1f1f] text-white"
+                            />
+                        </div>
+                    </div>
+                    <div className="space-y-2">
+                        <label className="text-xs font-medium text-gray-400 uppercase tracking-wide">Описание</label>
                         <Input 
-                            placeholder="Название (например: Рыбалка)" 
-                            value={formData.title}
-                            onChange={e => setFormData({...formData, title: e.target.value})}
-                            required
-                            className="bg-[#0a0a0a]"
-                        />
-                         <Input 
-                            type="number"
-                            placeholder="Уровень (1-10)" 
-                            value={formData.level}
-                            onChange={e => setFormData({...formData, level: e.target.value})}
-                            required
-                            className="bg-[#0a0a0a]"
+                            placeholder="Короткое описание" 
+                            value={formData.description}
+                            onChange={e => setFormData({...formData, description: e.target.value})}
+                            className="bg-[#0f0f0f] border-[#1f1f1f] text-white"
                         />
                     </div>
-                    <Input 
-                        placeholder="Короткое описание" 
-                        value={formData.description}
-                        onChange={e => setFormData({...formData, description: e.target.value})}
-                        className="bg-[#0a0a0a]"
-                    />
-                    <div className="flex justify-end gap-2">
-                        <Button type="button" variant="ghost" onClick={resetForm}>Отмена</Button>
+                    <div className="flex justify-end gap-2 pt-2">
+                        <Button type="button" variant="ghost" className="text-gray-400 hover:text-white" onClick={resetForm}>Отмена</Button>
                         <Button type="submit" className="bg-green-600 hover:bg-green-700">Сохранить</Button>
                     </div>
                 </form>
@@ -141,7 +159,7 @@ export default function AdminContractsPage() {
       
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {contracts.map((contract) => (
-             <Card key={contract.id} className="bg-[#0a0a0a] border border-[#1f1f1f] group hover:border-gray-700 transition-colors">
+             <Card key={contract.id} className="bg-[#0a0a0a] border border-[#1f1f1f] group hover:border-[#e81c5a]/50 transition-colors">
                 <CardContent className="p-6 relative">
                     <div className="absolute top-4 right-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                         <button onClick={() => startEdit(contract)} className="text-gray-400 hover:text-white"><Edit2 className="w-4 h-4" /></button>

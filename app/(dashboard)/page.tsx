@@ -12,12 +12,82 @@ export default async function Dashboard() {
   const user = session?.user?.email 
     ? await prisma.user.findUnique({
         where: { email: session.user.email },
-        select: { firstName: true, name: true }
+        select: { firstName: true, name: true, id: true }
       })
     : null;
 
   // Use firstName if available, otherwise fall back to Discord name
   const displayName = user?.firstName || session?.user?.name || 'Гость';
+
+  // Fetch dashboard settings
+  let settings = await prisma.dashboardSettings.findFirst();
+  if (!settings) {
+    settings = await prisma.dashboardSettings.create({ data: {} });
+  }
+
+  // Fetch recent reports for activity feed
+  const recentReports = await prisma.report.findMany({
+    select: {
+      id: true,
+      contractType: true,
+      status: true,
+      createdAt: true,
+      user: {
+        select: {
+          firstName: true,
+          name: true,
+        },
+      },
+    },
+    orderBy: {
+      createdAt: 'desc',
+    },
+    take: 4,
+  });
+
+  // Calculate best employee (most approved reports value)
+  const bestEmployee = await prisma.user.findFirst({
+    where: {
+      reports: {
+        some: {
+          status: 'APPROVED',
+        },
+      },
+    },
+    select: {
+      firstName: true,
+      name: true,
+      image: true,
+      reports: {
+        where: {
+          status: 'APPROVED',
+        },
+        select: {
+          userShare: true,
+        },
+      },
+    },
+    orderBy: {
+      reports: {
+        _count: 'desc',
+      },
+    },
+  });
+
+  const bestEmployeeEarnings = bestEmployee?.reports.reduce(
+    (sum, report) => sum + (report.userShare || 0),
+    0
+  ) || 0;
+
+  // Calculate XP percentage
+  const xpPercentage = settings.familyXPRequired > 0
+    ? Math.round((settings.familyXP / settings.familyXPRequired) * 100)
+    : 0;
+
+  // Calculate goal percentage
+  const goalPercentage = settings.goalTarget && settings.goalTarget > 0
+    ? Math.round(((settings.goalCurrent || 0) / settings.goalTarget) * 100)
+    : 0;
 
   return (
     <div className="space-y-8">
@@ -40,37 +110,39 @@ export default async function Dashboard() {
       {/* Featured Widgets */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Active Event / Bonus */}
-          <Card className="lg:col-span-2 relative overflow-hidden border-0 bg-linear-to-r from-[#e81c5a] to-[#7f1d1d]">
-              <div className="absolute top-0 right-0 p-8 opacity-10">
-                  <Flame className="w-64 h-64 text-white transform rotate-12" />
-              </div>
-              <CardContent className="p-8 relative z-10">
-                  <div className="flex items-center gap-3 mb-4">
-                      <span className="px-3 py-1 rounded-full bg-white/20 text-white text-xs font-bold uppercase tracking-wider backdrop-blur-sm border border-white/10">
-                          Активный бонус
-                      </span>
-                  </div>
-                  <h2 className="text-3xl font-bold text-white mb-2">X2 Опыт на все выхолные.</h2>
-                  <p className="text-white/80 max-w-lg mb-8 text-lg">
-                      Все контракты приносят удвоенное количество опыта и репутации до конца выходных.
-                  </p>
-                  <Button className="bg-white text-[#e81c5a] hover:bg-white/90 font-bold border-0">
-                      Перейти к контрактам <ArrowRight className="w-4 h-4 ml-2" />
-                  </Button>
-              </CardContent>
-          </Card>
+          {settings.bonusActive && (
+            <Card className="lg:col-span-2 relative overflow-hidden border-0 bg-linear-to-r from-[#e81c5a] to-[#7f1d1d]">
+                <div className="absolute top-0 right-0 p-8 opacity-10">
+                    <Flame className="w-64 h-64 text-white transform rotate-12" />
+                </div>
+                <CardContent className="p-8 relative z-10">
+                    <div className="flex items-center gap-3 mb-4">
+                        <span className="px-3 py-1 rounded-full bg-white/20 text-white text-xs font-bold uppercase tracking-wider backdrop-blur-sm border border-white/10">
+                            Активный бонус
+                        </span>
+                    </div>
+                    <h2 className="text-3xl font-bold text-white mb-2">{settings.bonusTitle || 'Специальное предложение'}</h2>
+                    <p className="text-white/80 max-w-lg mb-8 text-lg">
+                        {settings.bonusDescription || 'Следите за обновлениями!'}
+                    </p>
+                    <Button className="bg-white text-[#e81c5a] hover:bg-white/90 font-bold border-0">
+                        Перейти к контрактам <ArrowRight className="w-4 h-4 ml-2" />
+                    </Button>
+                </CardContent>
+            </Card>
+          )}
 
           {/* Family Bank Status */}
-          <Card className="bg-[#0a0a0a] border border-[#1f1f1f] flex flex-col justify-center">
+          <Card className={`bg-[#0a0a0a] border border-[#1f1f1f] flex flex-col justify-center ${!settings.bonusActive ? 'lg:col-span-2' : ''}`}>
               <CardContent className="p-8 text-center">
                   <div className="w-16 h-16 rounded-full bg-yellow-500/10 flex items-center justify-center mx-auto mb-6 text-yellow-500">
                       <Coins className="w-8 h-8" />
                   </div>
                   <h3 className="text-gray-400 uppercase tracking-widest text-xs font-bold mb-2">Баланс Семьи</h3>
-                  <div className="text-4xl font-mono font-bold text-white mb-4">$4,250,590</div>
-                  <div className="flex items-center justify-center gap-2 text-sm text-green-500">
-                      <Zap className="w-4 h-4 fill-current" />
-                      <span>+12% за неделю</span>
+                  <div className="text-4xl font-mono font-bold text-white mb-4">${settings.familyBalance.toLocaleString()}</div>
+                  <div className="flex items-center justify-center gap-2 text-sm text-gray-500">
+                      <Zap className="w-4 h-4" />
+                      <span>Обновлено</span>
                   </div>
               </CardContent>
           </Card>
@@ -78,6 +150,7 @@ export default async function Dashboard() {
 
         {/* Info Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {/* Financial Goal */}
           <Card className="bg-[#0a0a0a] border border-[#1f1f1f] hover:border-[#e81c5a]/50 transition-colors group cursor-pointer">
               <CardContent className="p-6">
                   <div className="flex items-center justify-between mb-4">
@@ -85,31 +158,45 @@ export default async function Dashboard() {
                       <Target className="w-5 h-5 text-[#e81c5a]" />
                   </div>
                   <div className="mb-4">
-                      <p className="text-xl font-bold text-white mb-1 group-hover:text-[#e81c5a] transition-colors">Покупка Особняка</p>
-                      <p className="text-sm text-gray-500">Собрано $4.2M из $10M</p>
+                      <p className="text-xl font-bold text-white mb-1 group-hover:text-[#e81c5a] transition-colors">
+                        {settings.goalName || 'Не установлена'}
+                      </p>
+                      <p className="text-sm text-gray-500">
+                        Собрано ${(settings.goalCurrent || 0).toLocaleString()} из ${(settings.goalTarget || 0).toLocaleString()}
+                      </p>
                   </div>
                   <div className="h-1.5 w-full bg-[#1a1a1a] rounded-full overflow-hidden">
-                      <div className="h-full bg-[#e81c5a] w-[42%]" />
+                      <div className="h-full bg-[#e81c5a]" style={{ width: `${goalPercentage}%` }} />
                   </div>
               </CardContent>
           </Card>
 
-           <Card className="bg-[#0a0a0a] border border-[#1f1f1f] hover:border-[#e81c5a]/50 transition-colors group cursor-pointer">
+          {/* Best Employee */}
+          <Card className="bg-[#0a0a0a] border border-[#1f1f1f] hover:border-[#e81c5a]/50 transition-colors group cursor-pointer">
               <CardContent className="p-6">
                   <div className="flex items-center justify-between mb-4">
                       <h3 className="text-gray-400 font-medium">Лучший сотрудник</h3>
                       <Crown className="w-5 h-5 text-yellow-500" />
                   </div>
-                  <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-linear-to-br from-gray-700 to-gray-900 border border-white/10" />
-                      <div>
-                          <p className="font-bold text-white">John Wick</p>
-                          <p className="text-xs text-yellow-500 font-mono">$150,000 / week</p>
-                      </div>
-                  </div>
+                  {bestEmployee ? (
+                    <div className="flex items-center gap-3">
+                        {bestEmployee.image ? (
+                          <img src={bestEmployee.image} alt="" className="w-10 h-10 rounded-full border border-white/10" />
+                        ) : (
+                          <div className="w-10 h-10 rounded-full bg-linear-to-br from-gray-700 to-gray-900 border border-white/10" />
+                        )}
+                        <div>
+                            <p className="font-bold text-white">{bestEmployee.firstName || bestEmployee.name}</p>
+                            <p className="text-xs text-yellow-500 font-mono">${bestEmployeeEarnings.toLocaleString()} заработано</p>
+                        </div>
+                    </div>
+                  ) : (
+                    <p className="text-sm text-gray-500">Нет данных</p>
+                  )}
               </CardContent>
           </Card>
 
+          {/* Family Level */}
           <Card className="bg-[#0a0a0a] border border-[#1f1f1f] hover:border-[#e81c5a]/50 transition-colors group cursor-pointer">
               <CardContent className="p-6">
                   <div className="flex items-center justify-between mb-4">
@@ -118,21 +205,22 @@ export default async function Dashboard() {
                   </div>
                   <div className="space-y-2">
                        <div className="flex justify-between text-sm">
-                           <span className="text-white font-bold text-xl">5 Lvl</span>
-                           <span className="text-gray-400 font-mono">85%</span>
+                           <span className="text-white font-bold text-xl">{settings.familyLevel} Lvl</span>
+                           <span className="text-gray-400 font-mono">{xpPercentage}%</span>
                        </div>
                        <div className="h-1.5 w-full bg-[#1a1a1a] rounded-full overflow-hidden">
-                           <div className="h-full bg-green-500 w-[85%]" />
+                           <div className="h-full bg-green-500" style={{ width: `${xpPercentage}%` }} />
                        </div>
-                       <p className="text-xs text-gray-500 mt-1">До следующего уровня 1,500 XP</p>
+                       <p className="text-xs text-gray-500 mt-1">
+                         До следующего уровня {settings.familyXPRequired - settings.familyXP} XP
+                       </p>
                   </div>
               </CardContent>
           </Card>
       </div>
       
-      {/* Activity and Garage */}
+      {/* Activity Feed */}
       <div className="grid grid-cols-1 gap-6">
-          {/* Activity Feed */}
            <Card className="bg-[#0a0a0a] border border-[#1f1f1f]">
                 <CardContent className="p-6">
                     <div className="flex items-center justify-between mb-6">
@@ -142,27 +230,39 @@ export default async function Dashboard() {
                         </Button>
                     </div>
                     <div className="space-y-6">
-                        {[
-                            { user: "Reid Shelby", action: "положил на счет", target: "$50,000", time: "10 мин. назад", icon: Coins, color: "text-yellow-500", bg: "bg-yellow-500/10" },
-                            { user: "John Wick", action: "взял со склада", target: "CarBine Rifle Mk2 (x2)", time: "25 мин. назад", icon: Target, color: "text-[#e81c5a]", bg: "bg-[#e81c5a]/10" },
-                            { user: "Sarah Connor", action: "повышена до ранга", target: "Soldier", time: "1 час назад", icon: Crown, color: "text-blue-500", bg: "bg-blue-500/10" },
-                            { user: "Arthur Shelby", action: "завершил контракт", target: "Дальнобойщик", time: "2 часа назад", icon: CheckCircle, color: "text-green-500", bg: "bg-green-500/10" },
-                        ].map((item, i) => (
-                            <div key={i} className="flex items-start gap-4">
-                                <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${item.bg}`}>
-                                    <item.icon className={`w-4 h-4 ${item.color}`} />
-                                </div>
-                                <div className="flex-1">
-                                    <p className="text-sm text-gray-300">
-                                        <span className="font-bold text-white hover:text-[#e81c5a] cursor-pointer transition-colors">{item.user}</span> {item.action} <span className="font-medium text-white">{item.target}</span>
-                                    </p>
-                                    <p className="text-xs text-gray-500 flex items-center gap-1 mt-1">
-                                        <Clock className="w-3 h-3" />
-                                        {item.time}
-                                    </p>
-                                </div>
-                            </div>
-                        ))}
+                        {recentReports.length > 0 ? (
+                          recentReports.map((report) => {
+                            const userName = report.user.firstName || report.user.name || 'Unknown';
+                            const statusColor = 
+                              report.status === 'APPROVED' ? 'text-green-500 bg-green-500/10' :
+                              report.status === 'REJECTED' ? 'text-red-500 bg-red-500/10' :
+                              'text-yellow-500 bg-yellow-500/10';
+                            const statusIcon = 
+                              report.status === 'APPROVED' ? CheckCircle :
+                              report.status === 'REJECTED' ? Target :
+                              Clock;
+                            const StatusIcon = statusIcon;
+                            
+                            return (
+                              <div key={report.id} className="flex items-start gap-4">
+                                  <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${statusColor}`}>
+                                      <StatusIcon className="w-4 h-4" />
+                                  </div>
+                                  <div className="flex-1">
+                                      <p className="text-sm text-gray-300">
+                                          <span className="font-bold text-white hover:text-[#e81c5a] cursor-pointer transition-colors">{userName}</span> отправил отчет <span className="font-medium text-white">{report.contractType}</span>
+                                      </p>
+                                      <p className="text-xs text-gray-500 flex items-center gap-1 mt-1">
+                                          <Clock className="w-3 h-3" />
+                                          {new Date(report.createdAt).toLocaleDateString('ru-RU')}
+                                      </p>
+                                  </div>
+                              </div>
+                            );
+                          })
+                        ) : (
+                          <p className="text-center text-gray-500 py-8">Нет активности</p>
+                        )}
                     </div>
                 </CardContent>
            </Card>

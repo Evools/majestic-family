@@ -1,5 +1,5 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ClipboardList, FileText, Settings, Users } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
+import { ClipboardList, FileText, LayoutDashboard, Settings, Users } from "lucide-react";
 import Link from "next/link";
 
 export default function AdminDashboard() {
@@ -29,6 +29,14 @@ export default function AdminDashboard() {
       bgColor: "bg-purple-500/10",
     },
     {
+      title: "Дашборд",
+      description: "Настройка блоков главной страницы (бонусы, баланс, цели).",
+      href: "/admin/dashboard",
+      icon: LayoutDashboard,
+      color: "text-[#e81c5a]",
+      bgColor: "bg-[#e81c5a]/10",
+    },
+    {
       title: "Настройки",
       description: "Общие настройки семьи и системы.",
       href: "/admin/settings",
@@ -45,51 +53,26 @@ export default function AdminDashboard() {
         <p className="text-gray-400">Управление семьей и контроль активности.</p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {adminLinks.map((link) => (
           <Link key={link.href} href={link.href}>
             <Card className="h-full bg-[#0a0a0a] border border-[#1f1f1f] hover:border-[#e81c5a]/50 transition-all cursor-pointer group">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium text-gray-400 group-hover:text-white transition-colors">
-                  {link.title}
-                </CardTitle>
-                <div className={`p-2 rounded-lg ${link.bgColor}`}>
-                  <link.icon className={`h-4 w-4 ${link.color}`} />
+              <CardContent className="p-6">
+                <div className="flex items-start justify-between mb-4">
+                  <div className={`w-12 h-12 rounded-lg ${link.bgColor} flex items-center justify-center`}>
+                    <link.icon className={`h-6 w-6 ${link.color}`} />
+                  </div>
                 </div>
-              </CardHeader>
-              <CardContent>
-                <p className="text-xs text-gray-500 mt-2">
+                <h3 className="text-lg font-bold text-white mb-2 group-hover:text-[#e81c5a] transition-colors">
+                  {link.title}
+                </h3>
+                <p className="text-sm text-gray-500">
                   {link.description}
                 </p>
               </CardContent>
             </Card>
           </Link>
         ))}
-      </div>
-
-      {/* Quick Stats Placeholder */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <Card className="bg-[#0a0a0a] border border-[#1f1f1f]">
-            <CardHeader>
-                <CardTitle className="text-lg text-white">Недавние отчеты</CardTitle>
-            </CardHeader>
-            <CardContent>
-                <div className="text-center py-8 text-gray-500 text-sm">
-                    Нет новых отчетов для проверки.
-                </div>
-            </CardContent>
-        </Card>
-        
-        <Card className="bg-[#0a0a0a] border border-[#1f1f1f]">
-            <CardHeader>
-                <CardTitle className="text-lg text-white">Статистика за неделю</CardTitle>
-            </CardHeader>
-            <CardContent>
-                 <div className="text-center py-8 text-gray-500 text-sm">
-                    Недостаточно данных для отображения графика.
-                </div>
-            </CardContent>
-        </Card>
       </div>
     </div>
   );
