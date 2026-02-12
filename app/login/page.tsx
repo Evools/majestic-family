@@ -5,11 +5,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Gamepad2 } from 'lucide-react';
 import { signIn as nextAuthSignIn } from 'next-auth/react';
 
-// console.log('SignIn import:', nextAuthSignIn);
-
 export default function LoginPage() {
   const handleLogin = () => {
-    nextAuthSignIn('discord', { callbackUrl: '/report' });
+    nextAuthSignIn('discord', { callbackUrl: '/' });
   };
 
   return (

@@ -74,9 +74,9 @@ export default function ReportPage() {
                                 { value: 'fishing_iv', label: 'Рыбалка IV уровня' },
                                 { value: 'fishing_v', label: 'Рыбалка V уровня' },
                                 { value: 'fishing_vi', label: 'Рыбалка VI уровня' },
-                                { value: 'fishing_x', label: 'Рыбалка VII уровня' },
-                                { value: 'fishing_x', label: 'Рыбалка VIII уровня' },
-                                { value: 'fishing_x', label: 'Рыбалка IX уровня' },
+                                { value: 'fishing_vii', label: 'Рыбалка VII уровня' },
+                                { value: 'fishing_viii', label: 'Рыбалка VIII уровня' },
+                                { value: 'fishing_ix', label: 'Рыбалка IX уровня' },
                                 { value: 'metallurgy', label: 'Металлургия' },
                                 { value: 'boxes', label: 'Товар со склада' },
                                 { value: 'atelier', label: 'Ателье' }

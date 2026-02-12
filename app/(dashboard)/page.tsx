@@ -1,14 +1,18 @@
+import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { ArrowRight, CheckCircle, Clock, Coins, Crown, Flame, Target, TrendingUp, Users, Zap } from 'lucide-react';
+import { getServerSession } from 'next-auth';
 
-export default function Dashboard() {
+export default async function Dashboard() {
+  const session = await getServerSession(authOptions);
+
   return (
     <div className="space-y-8">
       {/* Welcome Section */}
       <div className="flex flex-col md:flex-row items-end justify-between gap-4">
         <div>
-          <h1 className="text-4xl font-bold text-white tracking-tight mb-2">Добро пожаловать, <span className="text-[#e81c5a]">Reid</span></h1>
+          <h1 className="text-4xl font-bold text-white tracking-tight mb-2">Добро пожаловать, <span className="text-[#e81c5a]">{session?.user?.name}</span></h1>
           <p className="text-gray-400">Сегодня отличный день для ведения бизнеса.</p>
         </div>
         <div className="flex gap-3">
