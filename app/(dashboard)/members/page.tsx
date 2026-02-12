@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import {
+    Briefcase,
     Crown,
     Search,
     Shield,
@@ -35,12 +36,16 @@ interface Rank {
 }
 
 const RANKS: Rank[] = [
-    { id: 10, name: "Leader", color: "text-[#e81c5a]", bg: "bg-[#e81c5a]/10", req: "—", perms: "Full Access" },
-    { id: 9, name: "Deputy", color: "text-purple-500", bg: "bg-purple-500/10", req: "Доверие", perms: "Manage, recruiting" },
-    { id: 8, name: "Caporegime", color: "text-blue-500", bg: "bg-blue-500/10", req: "Решение лидера", perms: "Lead squads" },
-    { id: 7, name: "Soldier", color: "text-green-500", bg: "bg-green-500/10", req: "Аттестация", perms: "Weapons access" },
-    { id: 6, name: "Associate", color: "text-yellow-500", bg: "bg-yellow-500/10", req: "Собеседование", perms: "Contracts" },
-    { id: 1, name: "Novice", color: "text-gray-500", bg: "bg-gray-500/10", req: "Вступление", perms: "Discord access" },
+    { id: 10, name: "Глава семьи", color: "text-red-500", bg: "bg-red-500/10", req: "—", perms: "Главный руководитель. Полный контроль." },
+    { id: 9, name: "Заместитель главы", color: "text-yellow-500", bg: "bg-yellow-500/10", req: "Доверие", perms: "Правая рука главы. Координация." },
+    { id: 8, name: "Старшее руководство", color: "text-cyan-500", bg: "bg-cyan-500/10", req: "Назначение", perms: "Контроль дисциплины. Доступ к сейфу." },
+    { id: 7, name: "Руководитель направлений", color: "text-cyan-500", bg: "bg-cyan-500/10", req: "Назначение", perms: "Контракты, фарм, актив и экономика." },
+    { id: 6, name: "Старший состава", color: "text-green-500", bg: "bg-green-500/10", req: "Активность", perms: "Наставник. Помощь руководству." },
+    { id: 5, name: "Основной состав", color: "text-green-500", bg: "bg-green-500/10", req: "Контракты и Актив", perms: "Фундамент семьи. Регулярные контракты." },
+    { id: 4, name: "Младший состав", color: "text-green-500", bg: "bg-green-500/10", req: "Контракты", perms: "Начальный рабочий уровень. Помощь." },
+    { id: 3, name: "Рекрутер", color: "text-orange-500", bg: "bg-orange-500/10", req: "Фамилия Shelby", perms: "Поиск и приглашение новых людей." },
+    { id: 2, name: "Стажёр", color: "text-blue-500", bg: "bg-blue-500/10", req: "Знание правил", perms: "Испытательный срок. Базовые задачи." },
+    { id: 1, name: "Кандидат", color: "text-emerald-500", bg: "bg-emerald-500/10", req: "Вступление", perms: "Минимальные права. Проверка." },
 ];
 
 export default function MembersPage() {
@@ -154,7 +159,7 @@ export default function MembersPage() {
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-white/5">
-                                {filteredMembers.map((member, i) => {
+                                {filteredMembers.map((member) => {
                                     const rankInfo = RANKS.find(r => r.id === member.rank) || RANKS[RANKS.length - 1];
                                     const isActive = member.lastActiveAt && new Date(member.lastActiveAt).getTime() > Date.now() - 5 * 60 * 1000;
                                     
@@ -202,73 +207,114 @@ export default function MembersPage() {
             </Card>
           </>
       ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-              {/* Rank List */}
-              <div className="space-y-4">
-                  <h2 className="text-lg font-semibold text-white mb-4">Иерархия рангов</h2>
-                  {RANKS.map((rank) => (
-                      <Card key={rank.id} className="group overflow-hidden relative">
-                          <div className={cn("absolute left-0 top-0 bottom-0 w-1", rank.color.replace('text-', 'bg-'))} />
-                          <CardContent className="p-5 flex items-center justify-between">
-                              <div className="flex items-center gap-4">
-                                  <div className={cn("w-10 h-10 rounded-lg flex items-center justify-center font-bold text-lg", rank.bg, rank.color)}>
-                                      {rank.id}
-                                  </div>
-                                  <div>
-                                      <h3 className={cn("font-bold text-lg", rank.color)}>{rank.name}</h3>
-                                      <p className="text-sm text-gray-500">Доступ: {rank.perms}</p>
-                                  </div>
+          <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
+              {/* Rank List Section */}
+              <div className="lg:col-span-3 space-y-8">
+                  <div className="flex items-center justify-between">
+                      <h2 className="text-xl font-bold text-white tracking-tight">Иерархия рангов</h2>
+                      <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">10 Уровней</span>
+                  </div>
+
+                  <div className="space-y-6">
+                      {[
+                          { title: "Руководство", ranks: RANKS.filter(r => r.id >= 9), color: "text-[#e81c5a]" },
+                          { title: "Управление", ranks: RANKS.filter(r => r.id >= 7 && r.id < 9), color: "text-cyan-500" },
+                          { title: "Основной", ranks: RANKS.filter(r => r.id >= 4 && r.id < 7), color: "text-green-500" },
+                          { title: "Начинающий", ranks: RANKS.filter(r => r.id < 4), color: "text-blue-500" },
+                      ].map((tier, tidx) => (
+                          <div key={tidx} className="space-y-3">
+                              <div className="flex items-center gap-3 px-1">
+                                  <div className={cn("w-1 h-3 rounded-full", tier.color.replace('text-', 'bg-'))} />
+                                  <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500">{tier.title}</h3>
                               </div>
-                              <div className="text-right">
-                                  <span className="text-[10px] text-gray-500 uppercase tracking-wider block mb-1">Требование</span>
-                                  <span className="font-mono text-white font-bold">{rank.req}</span>
-                              </div>
-                          </CardContent>
-                      </Card>
-                  ))}
+                              <Card className="bg-[#0a0a0a] border-[#1f1f1f] overflow-hidden">
+                                  <div className="divide-y divide-white/5">
+                                      {tier.ranks.map((rank) => (
+                                          <div key={rank.id} className="group p-4 flex items-center justify-between hover:bg-white/2 transition-colors relative">
+                                              <div className="flex items-center gap-4">
+                                                  <div className={cn("w-10 h-10 rounded border border-white/5 flex items-center justify-center font-bold text-lg shrink-0", rank.bg, rank.color)}>
+                                                      {rank.id}
+                                                  </div>
+                                                  <div>
+                                                      <h4 className={cn("font-bold text-sm tracking-tight", rank.color)}>{rank.name}</h4>
+                                                      <p className="text-[11px] text-gray-500 line-clamp-1">{rank.perms}</p>
+                                                  </div>
+                                              </div>
+                                              <div className="text-right shrink-0">
+                                                  <span className="text-[8px] text-gray-600 uppercase tracking-widest block mb-0.5">Требование</span>
+                                                  <span className="text-[10px] text-gray-400 font-bold uppercase">{rank.req}</span>
+                                              </div>
+                                          </div>
+                                      ))}
+                                  </div>
+                              </Card>
+                          </div>
+                      ))}
+                  </div>
               </div>
 
-              {/* Responsibilities Info */}
-              <div className="space-y-6">
-                <Card>
-                    <CardHeader>
-                        <CardTitle className="flex items-center gap-2">
+              {/* Info Column */}
+              <div className="lg:col-span-2 space-y-6">
+                <Card className="bg-[#0a0a0a] border-[#1f1f1f] sticky top-8">
+                    <CardHeader className="pb-4">
+                        <CardTitle className="flex items-center gap-2 text-white">
                             <Crown className="w-5 h-5 text-[#e81c5a]" />
                             Система повышения
                         </CardTitle>
                     </CardHeader>
-                    <CardContent className="space-y-4 text-sm text-gray-400">
-                        <p>
-                            Повышение по ранговой системе осуществляется <strong>в ручном режиме</strong> на усмотрение Лидера или старшего состава (Deputy, Caporegime).
-                        </p>
-                        <p>
-                            Для рассмотрения кандидатуры на повышение учитывается:
-                        </p>
-                        <ul className="space-y-2 list-disc pl-4 text-gray-300">
-                            <li>Личная активность и участие в жизни семьи</li>
-                            <li>Выполнение поручений старшего состава</li>
-                            <li>Отсутствие нарушений и жалоб</li>
-                            <li>Доверие со стороны руководства</li>
-                        </ul>
+                    <CardContent className="space-y-6">
+                        <div className="space-y-4">
+                            <div className="flex flex-col gap-3">
+                                {[
+                                    { icon: Swords, text: "Высокая активность", desc: "Участие в жизни семьи." },
+                                    { icon: Briefcase, text: "Значимый вклад", desc: "Контракты и ресурсы." },
+                                    { icon: Shield, text: "Соблюдение устава", desc: "Дисциплина и поведение." }
+                                ].map((item, idx) => (
+                                    <div key={idx} className="flex gap-4 p-3 rounded-lg bg-white/2 border border-white/5 hover:border-[#e81c5a]/20 transition-all duration-300">
+                                        <div className="w-8 h-8 rounded-md bg-[#e81c5a]/10 flex items-center justify-center shrink-0">
+                                            <item.icon className="w-4 h-4 text-[#e81c5a]" />
+                                        </div>
+                                        <div>
+                                            <p className="text-xs font-bold text-white tracking-tight">{item.text}</p>
+                                            <p className="text-[10px] text-gray-500 mt-0.5">{item.desc}</p>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
+                        <div className="p-4 rounded-lg bg-orange-500/3 border border-orange-500/10 space-y-3">
+                            <div className="flex items-center gap-2">
+                                <Shield className="w-3 h-3 text-orange-500" />
+                                <h4 className="text-[10px] font-bold uppercase tracking-widest text-orange-500">Важные правила</h4>
+                            </div>
+                            <ul className="space-y-2.5">
+                                {[
+                                    "Ранги не покупаются и не выпрашиваются.",
+                                    "Выпрашивание может привести к выговору.",
+                                    "Повышение только после подтверждения Hight рангов.",
+                                    "Переход на 6+ ранг — только с подтверждением 8+ ранга."
+                                ].map((rule, idx) => (
+                                    <li key={idx} className="text-[11px] text-gray-500 leading-relaxed flex gap-2">
+                                        <span className="text-orange-500/50 shrink-0">•</span>
+                                        {rule}
+                                    </li>
+                                ))}
+                            </ul>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-3 pt-2">
+                            <div className="p-4 bg-[#0a0a0a] border border-white/5 rounded-lg text-center group hover:border-[#e81c5a]/20 transition-all">
+                                <Swords className="w-5 h-5 text-[#e81c5a] mx-auto mb-2 opacity-50 group-hover:opacity-100 transition-opacity" />
+                                <h4 className="text-[10px] font-black uppercase tracking-widest text-white">War</h4>
+                            </div>
+                            <div className="p-4 bg-[#0a0a0a] border border-white/5 rounded-lg text-center group hover:border-blue-500/20 transition-all">
+                                <Truck className="w-5 h-5 text-blue-500 mx-auto mb-2 opacity-50 group-hover:opacity-100 transition-opacity" />
+                                <h4 className="text-[10px] font-black uppercase tracking-widest text-white">Farm</h4>
+                            </div>
+                        </div>
                     </CardContent>
                 </Card>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <Card className="bg-[#0a0a0a] border-dashed border-[#2f2f2f]">
-                        <CardContent className="p-6 text-center">
-                            <Swords className="w-8 h-8 text-red-500 mx-auto mb-3" />
-                            <h4 className="font-bold text-white mb-1">Capture Squad</h4>
-                            <p className="text-xs text-gray-500">Ответственные за захват территорий.</p>
-                        </CardContent>
-                    </Card>
-                    <Card className="bg-[#0a0a0a] border-dashed border-[#2f2f2f]">
-                        <CardContent className="p-6 text-center">
-                            <Truck className="w-8 h-8 text-blue-500 mx-auto mb-3" />
-                            <h4 className="font-bold text-white mb-1">Logistics</h4>
-                            <p className="text-xs text-gray-500">Снабжение склада и контракты.</p>
-                        </CardContent>
-                    </Card>
-                </div>
               </div>
           </div>
       )}
