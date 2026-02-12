@@ -114,7 +114,7 @@ export function Sidebar() {
         )}
 
         <Link 
-          href="/settings"
+          href="/profile?tab=settings"
           className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-400 hover:text-white hover:bg-white/5 transition-all group"
         >
           <Settings className="w-5 h-5 text-gray-500 group-hover:text-white" />
@@ -128,22 +128,24 @@ export function Sidebar() {
       {/* User Profile */}
       <div className="p-4 border-t border-[#1f1f1f]">
         <div className="flex items-center gap-3 p-2 rounded-lg hover:bg-white/5 transition-colors">
-          {session?.user?.image ? (
-            <img 
-              src={session.user.image} 
-              alt={session.user.name || 'User'} 
-              className="w-9 h-9 rounded-full border border-white/10"
-            />
-          ) : (
-            <div className="w-9 h-9 rounded-full bg-linear-to-br from-[#e81c5a] to-purple-600 border border-white/10" />
-          )}
-          
-          <div className="flex flex-col min-w-0">
-            <span className="text-sm font-medium text-white truncate">
-                {session?.user?.name || 'User'}
-            </span>
-            <span className="text-xs text-gray-500 truncate">Member</span>
-          </div>
+          <Link href="/profile" className="flex items-center gap-3 flex-1 min-w-0 group cursor-pointer">
+            {session?.user?.image ? (
+                <img 
+                src={session.user.image} 
+                alt={session.user.name || 'User'} 
+                className="w-9 h-9 rounded-full border border-white/10 group-hover:border-white/30 transition-colors"
+                />
+            ) : (
+                <div className="w-9 h-9 rounded-full bg-linear-to-br from-[#e81c5a] to-purple-600 border border-white/10 group-hover:border-white/30 transition-colors" />
+            )}
+            
+            <div className="flex flex-col min-w-0">
+                <span className="text-sm font-medium text-white truncate group-hover:text-[#e81c5a] transition-colors">
+                    {session?.user?.name || 'User'}
+                </span>
+                <span className="text-xs text-gray-500 truncate">Участник</span>
+            </div>
+          </Link>
           
           <button 
             onClick={() => signOut({ callbackUrl: '/login' })}
