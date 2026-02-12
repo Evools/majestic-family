@@ -1,6 +1,4 @@
-import { cn } from '@/lib/utils';
 import { Contract } from '@prisma/client';
-import { ClipboardList } from 'lucide-react';
 
 interface ContractCardProps {
     contract: Contract;
@@ -9,63 +7,45 @@ interface ContractCardProps {
 export function ContractCard({ contract }: ContractCardProps) {
   const { title, description, reward, reputation, icon: iconName, level, isActive } = contract;
   
-  const status: 'active' | 'locked' = isActive ? 'active' : 'locked';
-  
   return (
-    <div className={cn(
-      "flex flex-col h-full relative z-10",
-      status === 'locked' && "opacity-40 grayscale pointer-events-none"
-    )}>
-        {/* Top Meta Row */}
-      <div className="flex items-start justify-between mb-6">
-        <div className={cn(
-            "w-12 h-12 rounded-xl flex items-center justify-center transition-all duration-300 border",
-            status === 'active' 
-                ? "bg-[#e81c5a]/10 text-[#e81c5a] border-[#e81c5a]/20" 
-                : "bg-white/5 text-gray-400 border-white/5"
-        )}>
-          <ClipboardList className="w-5 h-5" />
+    <div className="flex flex-col h-full relative group/card">
+      {/* Level and Title Section */}
+      <div className="flex items-start justify-between gap-3 mb-4">
+        <div className="flex-grow">
+          <div className="flex items-center gap-2 mb-1">
+            <h3 className="text-base font-bold text-white tracking-tight uppercase leading-none truncate group-hover/card:text-[#e81c5a] transition-colors duration-300">
+              {title}
+            </h3>
+            <span className="shrink-0 px-1.5 py-0.5 rounded bg-white/5 border border-white/10 text-gray-500 text-[8px] font-bold uppercase tracking-wider">
+              LVL {level}
+            </span>
+          </div>
+          <p className="text-gray-500 text-[11px] font-normal leading-relaxed line-clamp-2">
+            {description || 'Спецификации контракта не указаны'}
+          </p>
+        </div>
+      </div>
+      
+      {/* Rewards Grid */}
+      <div className="mt-auto pt-5 border-t border-white/5 grid grid-cols-2 gap-4">
+        <div className="space-y-0.5">
+          <span className="text-[8px] font-bold uppercase tracking-widest text-gray-600">Награда</span>
+          <div className="flex items-baseline gap-0.5">
+            <span className="text-xs font-bold text-white leading-none">$</span>
+            <span className="text-base font-bold text-white font-mono leading-none tracking-tight">
+              {reward.toLocaleString('en-US').replace(/,/g, ' ')}
+            </span>
+          </div>
         </div>
         
-        {status === 'active' && (
-            <span className="px-2.5 py-1 rounded-md bg-green-500/10 border border-green-500/20 text-green-500 text-[10px] uppercase font-bold tracking-wider">
-                Доступно
+        <div className="space-y-0.5 text-right">
+          <span className="text-[8px] font-bold uppercase tracking-widest text-gray-600">Опыт</span>
+          <div className="flex items-center justify-end gap-1">
+            <span className="text-base font-bold text-[#e81c5a] font-mono leading-none tracking-tight drop-shadow-[0_0_10px_rgba(232,28,90,0.15)]">
+              +{reputation}
             </span>
-        )}
-        {status === 'locked' && (
-            <span className="px-2.5 py-1 rounded-md bg-white/5 border border-white/10 text-gray-500 text-[10px] uppercase font-bold tracking-wider">
-                Недоступно
-            </span>
-        )}
-      </div>
-      
-      {/* Content */}
-      <div className="flex-grow">
-        <div className="flex items-center gap-2 mb-2">
-          <h3 className="text-xl font-bold text-white leading-tight">
-              {title}
-          </h3>
-          <span className="px-2 py-0.5 rounded bg-[#e81c5a]/10 text-[#e81c5a] text-[10px] font-bold border border-[#e81c5a]/20">
-            LVL {level}
-          </span>
-        </div>
-        <p className="text-gray-400 text-sm leading-relaxed mb-4">
-          {description || 'Нет описания'}
-        </p>
-      </div>
-      
-      {/* Footer Info */}
-      <div className="mt-auto">
-        <div className="grid grid-cols-2 gap-4 pt-4 border-t border-white/5 mb-4">
-            <div className="flex flex-col">
-                <span className="text-[10px] text-gray-500 uppercase tracking-wider font-semibold mb-1">Награда</span>
-                <span className="text-white font-bold font-mono text-lg">${reward.toLocaleString('en-US')}</span>
-            </div>
-            
-            <div className="flex flex-col items-end">
-                <span className="text-[10px] text-gray-500 uppercase tracking-wider font-semibold mb-1">Репутация</span>
-                <span className="text-[#e81c5a] font-bold font-mono text-lg drop-shadow-[0_0_8px_rgba(232,28,90,0.3)]">+{reputation} XP</span>
-            </div>
+            <span className="text-[9px] font-bold text-[#e81c5a] uppercase leading-none">XP</span>
+          </div>
         </div>
       </div>
     </div>

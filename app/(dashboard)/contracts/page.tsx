@@ -4,7 +4,7 @@ import { ContractCard } from '@/components/contract-card';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Contract } from '@prisma/client';
-import { AlertCircle, Briefcase, Check, Clock, History, Users, X } from 'lucide-react';
+import { AlertCircle, Briefcase, Clock, History, Users } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 type UserContractWithContract = {
@@ -104,20 +104,14 @@ export default function ContractsPage() {
     return activeContracts.some(uc => uc.contractId === contractId);
   };
 
-  const getCooldownRemaining = (contractId: string) => {
-    const lastContract = completedContracts
-      .filter(uc => uc.contractId === contractId && uc.completedAt)
-      .sort((a, b) => new Date(b.completedAt!).getTime() - new Date(a.completedAt!).getTime())[0];
-
-    if (!lastContract || !lastContract.completedAt) return null;
+  const getCooldownRemaining = (cooldownUntil: string | null) => {
+    if (!cooldownUntil) return null;
 
     const now = new Date();
-    const completionDate = new Date(lastContract.completedAt);
-    const cooldownMs = cooldownHours * 60 * 60 * 1000;
-    const elapsedMs = now.getTime() - completionDate.getTime();
+    const cooldownDate = new Date(cooldownUntil);
+    const remainingMs = cooldownDate.getTime() - now.getTime();
 
-    if (elapsedMs < cooldownMs) {
-      const remainingMs = cooldownMs - elapsedMs;
+    if (remainingMs > 0) {
       const hours = Math.floor(remainingMs / (60 * 60 * 1000));
       const minutes = Math.floor((remainingMs % (60 * 60 * 1000)) / (60 * 1000));
       return { hours, minutes };
@@ -135,60 +129,59 @@ export default function ContractsPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+    <div className="space-y-8 pb-10">
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-white tracking-tight">Контракты</h1>
-          <p className="text-gray-400 mt-1">Доступные контракты для выполнения</p>
+          <h1 className="text-3xl font-bold text-white tracking-tight uppercase">Контракты</h1>
+          <p className="text-gray-500 mt-1 font-normal tracking-wide">Выберите задание и получите вознаграждение</p>
         </div>
       </div>
 
       {/* Active Contracts Section */}
       {activeContracts.length > 0 && (
         <div className="space-y-4">
-          <div className="flex items-center gap-2">
-            <Briefcase className="w-5 h-5 text-blue-500" />
-            <h2 className="text-xl font-bold text-white">Активные контракты ({activeContracts.length}/3)</h2>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-lg bg-green-500/10 flex items-center justify-center">
+                <Briefcase className="w-4 h-4 text-green-500" />
+              </div>
+              <h2 className="text-xl font-bold text-white tracking-tight">Ваши задания</h2>
+            </div>
+            <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">{activeContracts.length} / 3 активно</span>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {activeContracts.map((uc) => {
               const isCancelling = cancellingContract === uc.id;
               
               return (
-                <Card key={uc.id} className="group h-full bg-[#0a0a0a] border-blue-500/30">
-                  <CardContent className="p-5">
-                    {/* Active Badge / Report Status */}
-                    <div className="flex items-center justify-between mb-3">
-                      <div className="flex items-center gap-2 px-2.5 py-1 rounded-lg bg-blue-500/10 border border-blue-500/20">
-                        <Check className="w-3.5 h-3.5 text-blue-500" />
-                        <span className="text-xs font-bold text-blue-500 uppercase tracking-wide">
-                          {uc.reports.length > 0 ? 'Отчет отправлен' : 'Активен'}
+                <Card key={uc.id} className="group relative overflow-hidden bg-[#0a0a0a] border-green-500/10 hover:border-green-500/30 transition-all duration-300">
+                  <div className="absolute top-0 left-0 w-1 h-full bg-green-500/50" />
+                  <CardContent className="p-6">
+                    <div className="flex items-center justify-between mb-6">
+                      <div className="flex items-center gap-2 px-3 py-1 rounded-md bg-green-500/5 border border-green-500/10">
+                        <div className={`w-1.5 h-1.5 rounded-full ${uc.reports.length > 0 ? 'bg-green-500 animate-pulse' : 'bg-green-500'}`} />
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-green-500/80">
+                          {uc.reports.length > 0 ? 'Отчет отправлен' : 'В процессе'}
                         </span>
                       </div>
+                      <span className="text-[10px] font-medium text-gray-600 uppercase tracking-wider px-2 py-0.5 bg-white/5 rounded border border-white/5">
+                        {new Date(uc.startedAt).toLocaleDateString('ru-RU')}
+                      </span>
                     </div>
 
                     <ContractCard contract={uc.contract} />
                     
-                    <div className="mt-3 pt-3 border-t border-white/5 text-xs text-gray-500 mb-3">
-                      Взят: {new Date(uc.startedAt).toLocaleDateString('ru-RU')}
+                    <div className="mt-6 pt-4 border-t border-white/5">
+                      <Button
+                        variant="ghost"
+                        className="w-full h-9 text-[10px] font-bold uppercase tracking-widest text-red-500/40 hover:text-red-500 hover:bg-red-500/5"
+                        onClick={() => setConfirmCancelId(uc.id)}
+                        disabled={isCancelling}
+                      >
+                        {isCancelling ? 'Разрыв...' : 'Отказаться'}
+                      </Button>
                     </div>
-
-                    {/* Cancel Button */}
-                    <Button
-                      variant="outline"
-                      className="w-full border-red-500/30 text-red-400 hover:bg-red-500/10 hover:text-red-300 hover:border-red-500/50"
-                      onClick={() => setConfirmCancelId(uc.id)}
-                      disabled={isCancelling}
-                    >
-                      {isCancelling ? (
-                        'Отмена...'
-                      ) : (
-                        <>
-                          <X className="w-4 h-4 mr-2" />
-                          Отказаться от контракта
-                        </>
-                      )}
-                    </Button>
                   </CardContent>
                 </Card>
               );
@@ -198,62 +191,84 @@ export default function ContractsPage() {
       )}
 
       {/* Available Contracts Section */}
-      <div className="space-y-4">
-        <h2 className="text-xl font-bold text-white">Доступные контракты</h2>
+      <div className="space-y-6">
+        <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-lg bg-[#e81c5a]/10 flex items-center justify-center">
+              <History className="w-4 h-4 text-[#e81c5a]" />
+            </div>
+            <h2 className="text-xl font-bold text-white tracking-tight">Доступные задания</h2>
+        </div>
+
         {contracts.length === 0 ? (
-          <Card className="bg-[#0a0a0a] border border-[#1f1f1f]">
-            <CardContent className="p-8 text-center text-gray-500">
-              Нет доступных контрактов
+          <Card className="bg-[#0a0a0a] border border-[#1f1f1f] border-dashed">
+            <CardContent className="p-12 text-center">
+              <p className="text-gray-500 font-medium">В данный момент предложений нет</p>
             </CardContent>
           </Card>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {contracts.map((contract) => {
               const isActive = isContractActive(contract.id);
-              const cooldown = getCooldownRemaining(contract.id);
+              const cooldown = getCooldownRemaining(contract.cooldownUntil as any);
               const isTaking = takingContract === contract.id;
+              const isFull = contract.cycleCount >= contract.maxSlots;
+              const progress = (contract.cycleCount / contract.maxSlots) * 100;
 
               return (
-                <Card key={contract.id} className={`group h-full ${isActive || cooldown ? 'opacity-50' : ''}`}>
-                  <CardContent className="p-5">
-                    <div className="flex items-center justify-between mb-3">
-                       <div className="flex items-center gap-1.5 px-2 py-0.5 rounded bg-white/5 border border-white/10">
-                          <Users className="w-3 h-3 text-gray-400" />
-                          <span className="text-[10px] font-bold text-gray-400 leading-none">
-                            {contract.cycleCount}/{contract.maxSlots}
+                <Card key={contract.id} className={`group relative h-full bg-[#0a0a0a] border-[#1f1f1f] hover:border-[#e81c5a]/20 transition-all duration-300 ${isActive || cooldown || isFull ? 'opacity-60 grayscale-[0.5]' : ''}`}>
+                  <CardContent className="p-6 flex flex-col h-full">
+                    {/* Slots Progress */}
+                    <div className="mb-6 space-y-1.5">
+                       <div className="flex items-center justify-between text-[9px] font-bold uppercase tracking-widest leading-none">
+                          <div className="flex items-center gap-1.5 text-gray-500">
+                            <Users className="w-3 h-3" />
+                            <span>Заполнено</span>
+                          </div>
+                          <span className={isFull ? 'text-[#e81c5a]' : 'text-gray-400'}>
+                            {contract.cycleCount} / {contract.maxSlots}
                           </span>
                        </div>
+                       <div className="h-1 w-full bg-white/5 rounded-full overflow-hidden">
+                          <div 
+                            className={`h-full transition-all duration-1000 ${isFull ? 'bg-[#e81c5a]' : 'bg-gray-700'}`}
+                            style={{ width: `${Math.min(progress, 100)}%` }}
+                          />
+                       </div>
                     </div>
+
                     <ContractCard contract={contract} />
-                    <Button
-                      className={`w-full mt-4 ${
-                        isActive || cooldown || contract.cycleCount >= contract.maxSlots
-                          ? 'bg-gray-700 cursor-not-allowed'
-                          : 'bg-[#e81c5a] hover:bg-[#c21548]'
-                      }`}
-                      onClick={() => handleTakeContract(contract.id)}
-                      disabled={isActive || !!cooldown || isTaking || activeContracts.length >= 3 || contract.cycleCount >= contract.maxSlots}
-                    >
-                      {isTaking ? (
-                        'Загрузка...'
-                      ) : isActive ? (
-                        <>
-                          <Check className="w-4 h-4 mr-2" />
-                          Уже взят
-                        </>
-                      ) : cooldown ? (
-                        <>
-                          <Clock className="w-4 h-4 mr-2" />
-                          Перезарядка {cooldown.hours}ч {cooldown.minutes}м
-                        </>
-                      ) : contract.cycleCount >= contract.maxSlots ? (
-                        'Мест нет'
-                      ) : activeContracts.length >= 3 ? (
-                        'Лимит достигнут'
-                      ) : (
-                        'Взять контракт'
-                      )}
-                    </Button>
+
+                    <div className="mt-auto pt-6">
+                      <Button
+                        className={`w-full h-11 text-[10px] font-bold uppercase tracking-widest transition-all duration-300 ${
+                          isActive || cooldown || isFull
+                            ? 'bg-white/5 text-gray-600 pointer-events-none'
+                            : 'bg-[#e81c5a] hover:bg-[#c21548] text-white shadow-lg shadow-[#e81c5a]/5'
+                        }`}
+                        onClick={() => handleTakeContract(contract.id)}
+                        disabled={isActive || !!cooldown || isTaking || activeContracts.length >= 3 || isFull}
+                      >
+                        {isTaking ? (
+                          <div className="flex items-center gap-2">
+                             <div className="w-3 h-3 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+                             ...
+                          </div>
+                        ) : isActive ? (
+                          'Взято'
+                        ) : cooldown ? (
+                          <div className="flex items-center gap-2">
+                            <Clock className="w-3 h-3" />
+                            {cooldown.hours}ч {cooldown.minutes}м
+                          </div>
+                        ) : isFull ? (
+                          'Мест нет'
+                        ) : activeContracts.length >= 3 ? (
+                          'Лимит 3/3'
+                        ) : (
+                          'Взять контракт'
+                        )}
+                      </Button>
+                    </div>
                   </CardContent>
                 </Card>
               );
@@ -262,22 +277,17 @@ export default function ContractsPage() {
         )}
       </div>
 
-      {/* Contract History Section */}
+      {/* History Section */}
       {completedContracts.length > 0 && (
-        <div className="space-y-4 pt-6 border-t border-[#1f1f1f]">
-          <div className="flex items-center gap-2">
-            <History className="w-5 h-5 text-gray-500" />
-            <h2 className="text-xl font-bold text-white">История контрактов</h2>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+        <div className="space-y-6 pt-10 border-t border-white/5">
+          <h2 className="text-sm font-bold text-gray-600 tracking-widest uppercase opacity-50">История выполненных</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {completedContracts.map((uc) => (
-              <Card key={uc.id} className="bg-[#0a0a0a] border-[#1f1f1f] grayscale opacity-60">
-                <CardContent className="p-5">
-                  <div className="flex items-center justify-between mb-3">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-green-500 bg-green-500/10 px-2 py-1 rounded">
-                      Завершен
-                    </span>
-                    <span className="text-[10px] text-gray-500">
+              <Card key={uc.id} className="bg-transparent border-white/5 grayscale opacity-30 hover:opacity-100 transition-opacity">
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <span className="text-[9px] font-bold uppercase tracking-widest text-green-500/50">Завершено</span>
+                    <span className="text-[9px] font-medium text-gray-500">
                       {new Date(uc.startedAt).toLocaleDateString()}
                     </span>
                   </div>
@@ -291,32 +301,31 @@ export default function ContractsPage() {
 
       {/* Confirmation Modal */}
       {confirmCancelId && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <Card className="max-w-md w-full bg-[#0a0a0a] border-red-500/30">
-            <CardContent className="p-6">
-              <div className="flex items-start gap-4 mb-6">
-                <div className="w-12 h-12 rounded-full bg-red-500/10 border border-red-500/20 flex items-center justify-center shrink-0">
-                  <AlertCircle className="w-6 h-6 text-red-500" />
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-50 p-4">
+          <Card className="max-w-md w-full bg-[#0a0a0a] border border-red-500/10 shadow-2xl overflow-hidden">
+            <div className="h-0.5 w-full bg-red-500/50" />
+            <CardContent className="p-8">
+              <div className="flex flex-col items-center text-center mb-8">
+                <div className="w-14 h-14 rounded-xl bg-red-500/5 border border-red-500/10 flex items-center justify-center mb-4 text-red-500">
+                  <AlertCircle className="w-7 h-7" />
                 </div>
-                <div>
-                  <h3 className="text-lg font-bold text-white mb-2">Отказаться от контракта?</h3>
-                  <p className="text-sm text-gray-400">
-                    Вы уверены, что хотите отказаться от этого контракта? Это действие нельзя отменить.
-                  </p>
-                </div>
+                <h3 className="text-xl font-bold text-white uppercase tracking-tight mb-2">Расторгнуть договор?</h3>
+                <p className="text-gray-500 text-sm font-normal px-4">
+                  Вы уверены? Весь текущий прогресс по этому контракту будет аннулирован.
+                </p>
               </div>
 
               {cancelError && (
-                <div className="mb-6 p-3 rounded-lg bg-red-500/10 border border-red-500/20 flex items-start gap-2 animate-in fade-in slide-in-from-top-1">
-                  <AlertCircle className="w-4 h-4 text-red-500 shrink-0 mt-0.5" />
-                  <p className="text-xs text-red-400 leading-relaxed">{cancelError}</p>
+                <div className="mb-6 p-4 rounded-lg bg-red-500/5 border border-red-500/10 flex items-center gap-3">
+                  <AlertCircle className="w-4 h-4 text-red-500 shrink-0" />
+                  <p className="text-[10px] text-red-500/80 font-bold uppercase tracking-wider">{cancelError}</p>
                 </div>
               )}
 
-              <div className="flex gap-3">
+              <div className="grid grid-cols-2 gap-3">
                 <Button
-                  variant="outline"
-                  className="flex-1"
+                  variant="ghost"
+                  className="h-10 text-[10px] font-bold uppercase tracking-widest text-gray-500 hover:text-white"
                   onClick={() => {
                     setConfirmCancelId(null);
                     setCancelError(null);
@@ -325,11 +334,11 @@ export default function ContractsPage() {
                   Отмена
                 </Button>
                 <Button
-                  className="flex-1 bg-red-500 hover:bg-red-600 text-white"
+                  className="h-10 bg-red-500 hover:bg-red-600 text-white text-[10px] font-bold uppercase tracking-widest"
                   onClick={() => handleCancelContract(confirmCancelId)}
                   disabled={cancellingContract === confirmCancelId}
                 >
-                  {cancellingContract === confirmCancelId ? 'Отмена...' : 'Отказаться'}
+                  {cancellingContract === confirmCancelId ? '...' : 'Расторгнуть'}
                 </Button>
               </div>
             </CardContent>
