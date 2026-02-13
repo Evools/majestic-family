@@ -1,9 +1,11 @@
 'use client';
 
+import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { CustomSelect } from '@/components/ui/custom-select';
+import { Dialog, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Role } from '@prisma/client';
-import { Shield, ShieldCheck, User as UserIcon } from 'lucide-react';
+import { Edit2, Shield, ShieldCheck, User as UserIcon } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
@@ -18,6 +20,10 @@ type UserWithRole = {
 export default function AdminUsersPage() {
   const [users, setUsers] = useState<UserWithRole[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedUser, setSelectedUser] = useState<UserWithRole | null>(null);
+  const [isEditOpen, setIsEditOpen] = useState(false); // Using separate state for dialog visibility
+  const [newRole, setNewRole] = useState<Role | null>(null);
+  const [isUpdating, setIsUpdating] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -30,7 +36,6 @@ export default function AdminUsersPage() {
       if (res.ok) {
         setUsers(await res.json());
       } else {
-        // Handle unauthorized or error
         if (res.status === 401) router.push('/');
       }
     } catch (error) {
@@ -40,21 +45,38 @@ export default function AdminUsersPage() {
     }
   };
 
-  const handleRoleChange = async (userId: string, newRole: string) => {
+  const handleEditClick = (user: UserWithRole) => {
+    setSelectedUser(user);
+    setNewRole(user.role);
+    setIsEditOpen(true);
+  };
+
+  const handleSaveRole = async () => {
+    if (!selectedUser || !newRole) return;
+    
+    setIsUpdating(true);
+    // Optimistic update
+    const previousUsers = [...users];
+    const updatedUser = { ...selectedUser, role: newRole };
+    setUsers(prev => prev.map(u => u.id === selectedUser.id ? updatedUser : u));
+    
     try {
       const res = await fetch('/api/admin/users', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId, role: newRole }),
+        body: JSON.stringify({ userId: selectedUser.id, role: newRole }),
       });
 
-      if (res.ok) {
-        setUsers(prev => prev.map(u => u.id === userId ? { ...u, role: newRole as Role } : u));
-      } else {
-        alert('Failed to update role');
+      if (!res.ok) {
+        throw new Error('Failed to update role');
       }
+      setIsEditOpen(false);
     } catch (error) {
       console.error(error);
+      setUsers(previousUsers); // Revert
+      alert('Не удалось обновить роль');
+    } finally {
+      setIsUpdating(false);
     }
   };
 
@@ -63,6 +85,14 @@ export default function AdminUsersPage() {
       case 'ADMIN': return <ShieldCheck className="w-4 h-4 text-red-500" />;
       case 'MODERATOR': return <Shield className="w-4 h-4 text-blue-500" />;
       default: return <UserIcon className="w-4 h-4 text-gray-500" />;
+    }
+  };
+  
+  const getRoleLabel = (role: Role) => {
+    switch (role) {
+      case 'ADMIN': return 'Администратор';
+      case 'MODERATOR': return 'Модератор';
+      default: return 'Участник';
     }
   };
 
@@ -81,6 +111,7 @@ export default function AdminUsersPage() {
             <CardContent className="p-4 flex items-center justify-between gap-4">
               <div className="flex items-center gap-4">
                 {user.image ? (
+                   // eslint-disable-next-line @next/next/no-img-element
                    <img src={user.image} alt={user.name || ''} className="w-10 h-10 rounded-full" />
                 ) : (
                    <div className="w-10 h-10 rounded-full bg-gray-700 flex items-center justify-center">
@@ -96,23 +127,81 @@ export default function AdminUsersPage() {
                 </div>
               </div>
 
-              <div className="w-48">
-                  <CustomSelect 
-                    options={[
-                        { value: 'MEMBER', label: 'Участник' },
-                        { value: 'MODERATOR', label: 'Модератор' },
-                        { value: 'ADMIN', label: 'Администратор' },
-                    ]}
-                    value={user.role}
-                    onChange={(val) => handleRoleChange(user.id, val)}
-                    className="h-9 text-xs"
-                    placeholder="Выберите роль"
-                  />
+              <div className="flex items-center gap-4">
+                <span className={`text-xs px-2 py-1 rounded-full border ${
+                    user.role === 'ADMIN' ? 'bg-red-500/10 text-red-500 border-red-500/20' :
+                    user.role === 'MODERATOR' ? 'bg-blue-500/10 text-blue-500 border-blue-500/20' :
+                    'bg-gray-500/10 text-gray-400 border-gray-500/20'
+                }`}>
+                    {getRoleLabel(user.role)}
+                </span>
+                
+                <Button 
+                    size="sm" 
+                    variant="ghost" 
+                    className="h-8 w-8 p-0"
+                    onClick={() => handleEditClick(user)}
+                >
+                    <Edit2 className="w-4 h-4 text-gray-400 hover:text-white" />
+                </Button>
               </div>
             </CardContent>
           </Card>
         ))}
       </div>
+
+      <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
+        {selectedUser && (
+            <>
+                <DialogHeader>
+                    <DialogTitle>Редактирование пользователя</DialogTitle>
+                    <DialogDescription>
+                        Измените роль пользователя {selectedUser.name}. 
+                    </DialogDescription>
+                </DialogHeader>
+                
+                <div className="py-6 space-y-4">
+                    <div className="flex items-center gap-4 p-4 rounded-lg bg-[#0f0f0f] border border-[#1f1f1f]">
+                        {selectedUser.image ? (
+                           // eslint-disable-next-line @next/next/no-img-element
+                           <img src={selectedUser.image} alt={selectedUser.name || ''} className="w-12 h-12 rounded-full" />
+                        ) : (
+                           <div className="w-12 h-12 rounded-full bg-gray-700 flex items-center justify-center">
+                              <span className="font-bold text-white text-lg">{selectedUser.name?.[0]}</span>
+                           </div>
+                        )}
+                        <div>
+                            <p className="font-bold text-white text-lg">{selectedUser.name}</p>
+                            <p className="text-sm text-gray-500">{selectedUser.email}</p>
+                        </div>
+                    </div>
+
+                    <div className="space-y-2">
+                        <label className="text-sm font-medium text-gray-400">Роль в системе</label>
+                        <CustomSelect 
+                            options={[
+                                { value: 'MEMBER', label: 'Участник (Доступ к общим функциям)' },
+                                { value: 'MODERATOR', label: 'Модератор (Проверка отчетов)' },
+                                { value: 'ADMIN', label: 'Администратор (Полный доступ)' },
+                            ]}
+                            value={newRole || 'MEMBER'}
+                            onChange={(val) => setNewRole(val as Role)}
+                            className="bg-[#0f0f0f]"
+                        />
+                    </div>
+                </div>
+
+                <DialogFooter>
+                    <Button variant="outline" onClick={() => setIsEditOpen(false)} className="border-[#1f1f1f] hover:bg-[#1f1f1f] text-white">
+                        Отмена
+                    </Button>
+                    <Button onClick={handleSaveRole} disabled={isUpdating} className="bg-[#e81c5a] hover:bg-[#c21548] text-white">
+                        {isUpdating ? 'Сохранение...' : 'Сохранить изменения'}
+                    </Button>
+                </DialogFooter>
+            </>
+        )}
+      </Dialog>
     </div>
   );
 }
