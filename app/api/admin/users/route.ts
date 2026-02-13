@@ -15,7 +15,7 @@ export async function GET(req: Request) {
 
     const users = await prisma.user.findMany({
       orderBy: { name: "asc" },
-      select: { id: true, name: true, email: true, image: true, role: true },
+      select: { id: true, name: true, email: true, image: true, role: true, rank: true },
     });
 
     return NextResponse.json(users);
@@ -35,20 +35,24 @@ export async function PUT(req: Request) {
     }
 
     const body = await req.json();
-    const { userId, role } = body;
+    const { userId, role, rank } = body;
 
-    if (!userId || !role) {
+    if (!userId || (!role && rank === undefined)) {
       return NextResponse.json({ error: "Missing fields" }, { status: 400 });
     }
 
     // Prevent changing your own role to something else if you are the only admin (optional safety)
-    if (userId === session.user.id) {
+    if (userId === session.user.id && role && role !== session.user.role) {
       return NextResponse.json({ error: "Cannot change your own role" }, { status: 400 });
     }
 
+    const updateData: any = {};
+    if (role) updateData.role = role as Role;
+    if (rank !== undefined) updateData.rank = parseInt(rank);
+
     const user = await prisma.user.update({
       where: { id: userId },
-      data: { role: role as Role },
+      data: updateData,
     });
 
     return NextResponse.json(user);

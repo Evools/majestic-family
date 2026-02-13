@@ -1,11 +1,11 @@
-'use client';
-
+'use client'
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { CustomSelect } from '@/components/ui/custom-select';
 import { Dialog, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
 import { Role } from '@prisma/client';
-import { Edit2, Shield, ShieldCheck, User as UserIcon } from 'lucide-react';
+import { Award, Edit2, Shield, ShieldCheck, User as UserIcon } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
@@ -15,6 +15,7 @@ type UserWithRole = {
   email: string | null;
   image: string | null;
   role: Role;
+  rank: number;
 };
 
 export default function AdminUsersPage() {
@@ -23,6 +24,7 @@ export default function AdminUsersPage() {
   const [selectedUser, setSelectedUser] = useState<UserWithRole | null>(null);
   const [isEditOpen, setIsEditOpen] = useState(false); // Using separate state for dialog visibility
   const [newRole, setNewRole] = useState<Role | null>(null);
+  const [newRank, setNewRank] = useState<number>(1);
   const [isUpdating, setIsUpdating] = useState(false);
   const router = useRouter();
 
@@ -48,6 +50,7 @@ export default function AdminUsersPage() {
   const handleEditClick = (user: UserWithRole) => {
     setSelectedUser(user);
     setNewRole(user.role);
+    setNewRank(user.rank || 1);
     setIsEditOpen(true);
   };
 
@@ -57,24 +60,24 @@ export default function AdminUsersPage() {
     setIsUpdating(true);
     // Optimistic update
     const previousUsers = [...users];
-    const updatedUser = { ...selectedUser, role: newRole };
+    const updatedUser = { ...selectedUser, role: newRole, rank: newRank };
     setUsers(prev => prev.map(u => u.id === selectedUser.id ? updatedUser : u));
     
     try {
       const res = await fetch('/api/admin/users', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: selectedUser.id, role: newRole }),
+        body: JSON.stringify({ userId: selectedUser.id, role: newRole, rank: newRank }),
       });
 
       if (!res.ok) {
-        throw new Error('Failed to update role');
+        throw new Error('Failed to update user');
       }
       setIsEditOpen(false);
     } catch (error) {
       console.error(error);
       setUsers(previousUsers); // Revert
-      alert('Не удалось обновить роль');
+      alert('Не удалось обновить данные');
     } finally {
       setIsUpdating(false);
     }
@@ -123,7 +126,15 @@ export default function AdminUsersPage() {
                         <p className="font-bold text-white">{user.name}</p>
                         {getRoleIcon(user.role)}
                     </div>
-                    <p className="text-xs text-gray-500">{user.email}</p>
+                    <div className="flex items-center gap-2 text-xs text-gray-500">
+                        <span>{user.email}</span>
+                        {user.rank > 0 && (
+                            <span className="flex items-center gap-1 text-yellow-500">
+                                <Award className="w-3 h-3" />
+                                Ранг: {user.rank}
+                            </span>
+                        )}
+                    </div>
                 </div>
               </div>
 
@@ -156,7 +167,7 @@ export default function AdminUsersPage() {
                 <DialogHeader>
                     <DialogTitle>Редактирование пользователя</DialogTitle>
                     <DialogDescription>
-                        Измените роль пользователя {selectedUser.name}. 
+                        Измените данные пользователя {selectedUser.name}. 
                     </DialogDescription>
                 </DialogHeader>
                 
@@ -188,6 +199,19 @@ export default function AdminUsersPage() {
                             onChange={(val) => setNewRole(val as Role)}
                             className="bg-[#0f0f0f]"
                         />
+                    </div>
+
+                    <div className="space-y-2">
+                        <label className="text-sm font-medium text-gray-400">Ранг (Уровень доступа)</label>
+                        <Input
+                            type="number"
+                            min="1"
+                            max="100"
+                            value={newRank}
+                            onChange={(e) => setNewRank(parseInt(e.target.value) || 0)}
+                            className="bg-[#0f0f0f] border-[#1f1f1f] text-white"
+                        />
+                        <p className="text-xs text-gray-500">Укажите числовое значение ранга (например, 1-10)</p>
                     </div>
                 </div>
 
