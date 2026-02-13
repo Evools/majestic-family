@@ -6,7 +6,7 @@ import { NextResponse } from "next/server";
 // POST: Add participant to a report
 export async function POST(
   req: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -16,7 +16,7 @@ export async function POST(
     }
 
     const { userId } = await req.json();
-    const reportId = params.id;
+    const { id: reportId } = await params;
 
     if (!userId) {
       return NextResponse.json({ error: "Missing userId" }, { status: 400 });
@@ -79,7 +79,7 @@ export async function POST(
 // DELETE: Remove participant from a report
 export async function DELETE(
   req: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -90,7 +90,7 @@ export async function DELETE(
 
     const { searchParams } = new URL(req.url);
     const userId = searchParams.get('userId');
-    const reportId = params.id;
+    const { id: reportId } = await params;
 
     if (!userId) {
       return NextResponse.json({ error: "Missing userId" }, { status: 400 });

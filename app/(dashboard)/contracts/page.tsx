@@ -153,15 +153,20 @@ export default function ContractsPage() {
 
       {/* Active Contracts Section */}
       {activeContracts.length > 0 && (
-        <div className="space-y-4">
+        <div className="space-y-6">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg bg-green-500/10 flex items-center justify-center">
-                <Briefcase className="w-4 h-4 text-green-500" />
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-green-500/10 flex items-center justify-center">
+                <Briefcase className="w-5 h-5 text-green-500" />
               </div>
-              <h2 className="text-xl font-bold text-white tracking-tight">Ваши задания</h2>
+              <div>
+                <h2 className="text-2xl font-bold text-white tracking-tight">Ваши задания</h2>
+                <p className="text-gray-500 text-xs">Активные контракты в работе</p>
+              </div>
             </div>
-            <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">{activeContracts.length} / {maxActiveContracts} активно</span>
+            <span className="px-3 py-1 rounded-full bg-white/5 border border-white/10 text-xs font-bold text-gray-400 uppercase tracking-widest">
+              {activeContracts.length} / {maxActiveContracts} активно
+            </span>
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -175,51 +180,49 @@ export default function ContractsPage() {
                   <div className="absolute -top-24 -right-24 w-48 h-48 bg-green-500/5 blur-[80px] group-hover:bg-green-500/10 transition-colors duration-500" />
                   
                   {/* Status Bar */}
-                  <div className={`absolute top-0 left-0 w-full h-0.5 ${hasReport ? 'bg-blue-500/50' : 'bg-green-500/50'}`} />
+                  <div className={`absolute top-0 left-0 w-full h-1 ${hasReport ? 'bg-blue-500' : 'bg-green-500'}`} />
                   
-                  <CardContent className="p-6">
+                  <CardContent className="p-6 flex flex-col h-full">
                     <div className="flex items-center justify-between mb-6">
                       <div className="flex items-center gap-2">
-                        <div className={`flex items-center gap-2 px-2.5 py-1 rounded-full border text-[9px] font-bold uppercase tracking-widest ${
+                        <div className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border text-[10px] font-bold uppercase tracking-widest ${
                           hasReport 
-                            ? 'bg-blue-500/5 border-blue-500/20 text-blue-500' 
-                            : 'bg-green-500/5 border-green-500/20 text-green-500'
+                            ? 'bg-blue-500/10 border-blue-500/20 text-blue-500' 
+                            : 'bg-green-500/10 border-green-500/20 text-green-500'
                         }`}>
-                          <div className={`w-1 h-1 rounded-full ${hasReport ? 'bg-blue-500' : 'bg-green-500 animate-pulse'}`} />
+                          <div className={`w-1.5 h-1.5 rounded-full ${hasReport ? 'bg-blue-500' : 'bg-green-500 animate-pulse'}`} />
                           {hasReport ? 'Отчет на проверке' : 'Миссия Активна'}
                         </div>
                       </div>
                       
-                      <div className="flex items-center gap-1.5 text-gray-600">
-                        <Clock className="w-3 h-3" />
-                        <span className="text-[10px] font-bold uppercase tracking-widest">
-                          {new Date(uc.startedAt).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}
-                        </span>
+                      <div className="flex items-center gap-1.5 text-gray-500 bg-white/5 px-2 py-1 rounded text-[10px] font-bold uppercase tracking-widest">
+                        <Clock className="w-3.5 h-3.5" />
+                        {new Date(uc.startedAt).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}
                       </div>
                     </div>
 
-                    <div className="space-y-4">
-                      <ContractCard contract={uc.contract} />
-                      
-                      <div className="grid grid-cols-2 gap-3 pt-4">
-                        <Link href="/report" className="contents">
-                          <Button 
-                            className="bg-white/5 hover:bg-white/10 border border-white/5 text-[10px] font-bold uppercase tracking-widest h-10 group/btn transition-all duration-300"
-                          >
-                            <span className="flex-1 text-center">Сдать отчет</span>
-                            <ArrowUpRight className="w-3 h-3 ml-2 text-gray-500 group-hover/btn:text-white group-hover/btn:translate-x-0.5 group-hover/btn:-translate-y-0.5 transition-all" />
-                          </Button>
-                        </Link>
-                        
-                        <Button
-                          variant="ghost"
-                          className="h-10 text-[10px] font-bold uppercase tracking-widest text-red-500/40 hover:text-red-500 hover:bg-red-500/5 border border-transparent hover:border-red-500/10"
-                          onClick={() => setConfirmCancelId(uc.id)}
-                          disabled={isCancelling}
+                    <div className="grow">
+                        <ContractCard contract={uc.contract} />
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-3 pt-6 mt-2 border-t border-white/5">
+                      <Link href="/report" className="contents">
+                        <Button 
+                          className="bg-white/5 hover:bg-white/10 border border-white/5 text-xs font-bold uppercase tracking-widest h-11 group/btn transition-all duration-300"
                         >
-                          {isCancelling ? '...' : 'Отмена'}
+                          <span className="flex-1 text-center">Сдать отчет</span>
+                          <ArrowUpRight className="w-4 h-4 ml-2 text-gray-500 group-hover/btn:text-white group-hover/btn:translate-x-0.5 group-hover/btn:-translate-y-0.5 transition-all" />
                         </Button>
-                      </div>
+                      </Link>
+                      
+                      <Button
+                        variant="ghost"
+                        className="h-11 text-xs font-bold uppercase tracking-widest text-red-500/60 hover:text-red-500 hover:bg-red-500/5 border border-transparent hover:border-red-500/10"
+                        onClick={() => setConfirmCancelId(uc.id)}
+                        disabled={isCancelling}
+                      >
+                        {isCancelling ? '...' : 'Отмена'}
+                      </Button>
                     </div>
                   </CardContent>
                 </Card>
@@ -231,11 +234,14 @@ export default function ContractsPage() {
 
       {/* Available Contracts Section */}
       <div className="space-y-6">
-        <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-[#e81c5a]/10 flex items-center justify-center">
-              <History className="w-4 h-4 text-[#e81c5a]" />
+        <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-[#e81c5a]/10 flex items-center justify-center">
+              <History className="w-5 h-5 text-[#e81c5a]" />
             </div>
-            <h2 className="text-xl font-bold text-white tracking-tight">Доступные задания</h2>
+            <div>
+                 <h2 className="text-2xl font-bold text-white tracking-tight">Доступные задания</h2>
+                 <p className="text-gray-500 text-xs">Выберите контракт для выполнения</p>
+            </div>
         </div>
 
         {contracts.length === 0 ? (
@@ -253,15 +259,37 @@ export default function ContractsPage() {
               const isFull = contract.cycleCount >= contract.maxSlots;
               const alreadyParticipated = contract.alreadyParticipated;
               const progress = (contract.cycleCount / contract.maxSlots) * 100;
+              
+              // Only dim strictly if absolutely not interactive, but keep readable
+              const isDimmed = isActive || (cooldown && !isActive);
 
               return (
-                <Card key={contract.id} className={`group relative h-full bg-[#0a0a0a] border-[#1f1f1f] hover:border-[#e81c5a]/20 transition-all duration-300 ${isActive || cooldown || isFull || alreadyParticipated ? 'opacity-60 grayscale-[0.5]' : ''}`}>
-                  <CardContent className="p-6 flex flex-col h-full">
-                    <div className="mb-6 space-y-2.5">
-                       <div className="flex items-center justify-between text-[9px] font-bold uppercase tracking-widest leading-none">
-                          <div className="flex items-center gap-1.5 text-gray-500">
-                            <Users className="w-3 h-3" />
-                            <span>{contract.isFlexible ? 'Активно' : 'Заполнено'}</span>
+                <Card key={contract.id} className={`group relative h-full bg-[#0a0a0a] border border-[#1f1f1f] hover:border-[#e81c5a]/20 transition-all duration-300 flex flex-col ${isDimmed ? 'opacity-80' : ''}`}>
+                  {/* Status Overlay Badges */}
+                  <div className="absolute top-4 right-4 z-10 flex flex-col gap-1 items-end pointer-events-none">
+                     {isActive && (
+                         <span className="px-2 py-1 bg-green-500/20 text-green-500 text-[10px] font-bold uppercase tracking-widest rounded border border-green-500/20 shadow-lg backdrop-blur-sm">
+                             В работе
+                         </span>
+                     )}
+                     {alreadyParticipated && !isActive && (
+                         <span className="px-2 py-1 bg-blue-500/20 text-blue-500 text-[10px] font-bold uppercase tracking-widest rounded border border-blue-500/20 shadow-lg backdrop-blur-sm">
+                             Выполнено
+                         </span>
+                     )}
+                     {isFull && !isActive && !alreadyParticipated && (
+                         <span className="px-2 py-1 bg-red-500/20 text-red-500 text-[10px] font-bold uppercase tracking-widest rounded border border-red-500/20 shadow-lg backdrop-blur-sm">
+                             Мест нет
+                         </span>
+                     )}
+                  </div>
+
+                  <CardContent className="p-6 flex flex-col h-full z-0 relative">
+                    <div className="mb-6 space-y-3">
+                       <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-widest leading-none">
+                          <div className="flex items-center gap-1.5 text-gray-400">
+                            <Users className="w-3.5 h-3.5" />
+                            <span>{contract.isFlexible ? 'Без лимита' : 'Участники'}</span>
                           </div>
                           <span className={!contract.isFlexible && isFull ? 'text-[#e81c5a]' : 'text-gray-400'}>
                             {contract.isFlexible ? contract.cycleCount : `${contract.cycleCount} / ${contract.maxSlots}`}
@@ -269,37 +297,37 @@ export default function ContractsPage() {
                        </div>
                        
                        {!contract.isFlexible ? (
-                         <div className="h-1 w-full bg-white/5 rounded-full overflow-hidden">
+                         <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
                             <div 
-                              className={`h-full transition-all duration-1000 ${isFull ? 'bg-[#e81c5a]' : 'bg-gray-700'}`}
+                              className={`h-full transition-all duration-1000 ${isFull ? 'bg-[#e81c5a]' : 'bg-gray-600'}`}
                               style={{ width: `${Math.min(progress, 100)}%` }}
                             />
                          </div>
                        ) : (
-                         <div className="h-1 w-full bg-white/5 rounded-full overflow-hidden">
+                         <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
                             <div className="h-full bg-cyan-500/50 w-full animate-pulse" />
                          </div>
                        )}
 
                        {/* Active Participants Avatars/Names */}
                        {contract.activeParticipants && contract.activeParticipants.length > 0 && (
-                         <div className="flex flex-wrap gap-1 mt-2">
+                         <div className="flex flex-wrap gap-1.5 mt-2 min-h-[28px]">
                            {contract.activeParticipants.map((p) => (
                              <div 
                                key={p.user.id} 
-                               className="pl-1 pr-2 py-0.5 rounded-full bg-white/5 border border-white/5 text-[8px] text-gray-500 font-bold uppercase tracking-widest flex items-center gap-1.5 hover:border-[#e81c5a]/30 transition-colors"
+                               className="pl-1 pr-2 py-0.5 rounded-full bg-white/5 border border-white/5 text-[9px] text-gray-400 font-bold uppercase tracking-widest flex items-center gap-1.5 hover:border-[#e81c5a]/30 transition-colors"
                                title={p.user.firstName || p.user.name}
                              >
                                {p.user.image ? (
                                  <img 
                                    src={p.user.image} 
                                    alt="" 
-                                   className="w-3.5 h-3.5 rounded-full object-cover border border-white/10"
+                                   className="w-4 h-4 rounded-full object-cover border border-white/10"
                                  />
                                ) : (
-                                 <div className="w-1.5 h-1.5 rounded-full bg-green-500 shadow-[0_0_5px_rgba(34,197,94,0.5)]" />
+                                 <div className="w-2 h-2 rounded-full bg-green-500 shadow-[0_0_5px_rgba(34,197,94,0.5)] ml-1" />
                                )}
-                               <span className="max-w-[60px] truncate">
+                               <span className="max-w-[70px] truncate">
                                  {p.user.firstName || p.user.name}
                                </span>
                              </div>
@@ -308,38 +336,40 @@ export default function ContractsPage() {
                        )}
                     </div>
 
-                    <ContractCard contract={contract} />
+                    <div className="grow">
+                        <ContractCard contract={contract} />
+                    </div>
 
-                    <div className="mt-auto pt-6">
+                    <div className="mt-6 pt-6 border-t border-white/5">
                       <Button
-                        className={`w-full h-11 text-[10px] font-bold uppercase tracking-widest transition-all duration-300 ${
+                        className={`w-full h-12 text-xs font-bold uppercase tracking-widest transition-all duration-300 ${
                           isActive || cooldown || isFull || alreadyParticipated
-                            ? 'bg-white/5 text-gray-600 pointer-events-none'
-                            : 'bg-[#e81c5a] hover:bg-[#c21548] text-white shadow-lg shadow-[#e81c5a]/5'
+                            ? 'bg-white/5 text-gray-500 border border-white/5 hover:bg-white/10'
+                            : 'bg-[#e81c5a] hover:bg-[#c21548] text-white shadow-lg shadow-[#e81c5a]/20 hover:shadow-[#e81c5a]/40'
                         }`}
                         onClick={() => handleTakeContract(contract.id)}
                         disabled={isActive || !!cooldown || isTaking || activeContracts.length >= maxActiveContracts || isFull || alreadyParticipated}
                       >
                         {isTaking ? (
                           <div className="flex items-center gap-2">
-                             <div className="w-3 h-3 border-2 border-white/20 border-t-white rounded-full animate-spin" />
-                             ...
+                             <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+                             Обработка...
                           </div>
                         ) : isActive ? (
-                          'Взято'
+                          'Контракт активен'
                         ) : cooldown ? (
-                          <div className="flex items-center gap-2">
-                            <Clock className="w-3 h-3" />
-                            {cooldown.hours}ч {cooldown.minutes}м
+                          <div className="flex items-center gap-2 text-orange-400">
+                            <Clock className="w-4 h-4" />
+                            <span>{cooldown.hours}ч {cooldown.minutes}м</span>
                           </div>
                         ) : isFull ? (
-                          'Мест нет'
+                          'Группа набрана'
                         ) : alreadyParticipated ? (
-                          'Выполнено'
+                          'Завершено'
                         ) : activeContracts.length >= maxActiveContracts ? (
-                          `Лимит ${maxActiveContracts}/${maxActiveContracts}`
+                          `Лимит активных (${maxActiveContracts})`
                         ) : (
-                          'Взять контракт'
+                          'Подписать контракт'
                         )}
                       </Button>
                     </div>
@@ -421,7 +451,7 @@ export default function ContractsPage() {
       )}
       {/* Error Modal */}
       {errorModal && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-[60] p-4 animate-in fade-in duration-300">
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-60 p-4 animate-in fade-in duration-300">
           <Card className="max-w-md w-full bg-[#0a0a0a] border border-[#1f1f1f] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300">
             <div className="h-1 w-full bg-[#e81c5a]/50" />
             <CardContent className="p-8">

@@ -4,6 +4,7 @@ import { OnlineUsers } from '@/components/online-users';
 import { cn } from '@/lib/utils';
 import {
     Book,
+    ChevronRight,
     ClipboardList,
     Clock,
     LayoutDashboard,
@@ -17,6 +18,7 @@ import {
 import { signOut, useSession } from 'next-auth/react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useState } from 'react';
 
 const menuItems = [
     {
@@ -53,6 +55,22 @@ const menuItems = [
 export function Sidebar() {
   const pathname = usePathname();
   const { data: session } = useSession();
+  
+  // State to track open/closed sections
+  const [openSections, setOpenSections] = useState<Record<string, boolean>>({
+      "Основное": true,
+      "Семья": true,
+      "Работа": true,
+      "Финансы": true,
+      "Система": true
+  });
+
+  const toggleSection = (title: string) => {
+      setOpenSections(prev => ({
+          ...prev,
+          [title]: !prev[title]
+      }));
+  };
 
   return (
     <div className="flex flex-col h-screen w-64 bg-[#0a0a0a] border-r border-[#1f1f1f] fixed left-0 top-0 z-50">
@@ -65,34 +83,53 @@ export function Sidebar() {
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 px-3 py-6 space-y-6 overflow-y-auto custom-scrollbar">
+      <nav className="flex-1 px-3 py-6 space-y-2 overflow-y-auto custom-scrollbar">
         {menuItems.map((group) => (
-            <div key={group.title}>
-                <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2 px-3">
-                    {group.title}
-                </div>
-                <div className="space-y-1">
-                    {group.items.map((item) => {
-                        const isActive = pathname === item.href;
-                        return (
-                            <Link
-                                key={item.name}
-                                href={item.href}
-                                className={cn(
-                                    "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all group",
-                                    isActive 
-                                    ? "bg-[#e81c5a]/10 text-[#e81c5a]" 
-                                    : "text-gray-400 hover:text-white hover:bg-white/5"
-                                )}
-                            >
-                                <item.icon className={cn(
-                                    "w-5 h-5",
-                                    isActive ? "text-[#e81c5a]" : "text-gray-500 group-hover:text-white"
-                                )} />
-                                {item.name}
-                            </Link>
-                        );
-                    })}
+            <div key={group.title} className="mb-2">
+                <button 
+                    onClick={() => toggleSection(group.title)}
+                    className="w-full flex items-center justify-between text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2 px-3 py-2 hover:text-white hover:bg-white/5 rounded-lg transition-colors group/header"
+                >
+                    <span>{group.title}</span>
+                    <ChevronRight 
+                        className={cn(
+                            "w-3 h-3 text-gray-600 group-hover/header:text-white transition-transform duration-300",
+                            openSections[group.title] ? "rotate-90" : "rotate-0"
+                        )} 
+                    />
+                </button>
+                
+                <div
+                    className={cn(
+                        "grid transition-all duration-300 ease-in-out",
+                        openSections[group.title] ? "grid-rows-[1fr] opacity-100 mb-2" : "grid-rows-[0fr] opacity-0"
+                    )}
+                >
+                    <div className="overflow-hidden">
+                        <div className="space-y-1">
+                            {group.items.map((item) => {
+                                const isActive = pathname === item.href;
+                                return (
+                                    <Link
+                                        key={item.name}
+                                        href={item.href}
+                                        className={cn(
+                                            "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all group ml-2",
+                                            isActive 
+                                            ? "bg-[#e81c5a]/10 text-[#e81c5a]" 
+                                            : "text-gray-400 hover:text-white hover:bg-white/5"
+                                        )}
+                                    >
+                                        <item.icon className={cn(
+                                            "w-4 h-4", // Slightly smaller icon specifically for nested look
+                                            isActive ? "text-[#e81c5a]" : "text-gray-500 group-hover:text-white"
+                                        )} />
+                                        {item.name}
+                                    </Link>
+                                );
+                            })}
+                        </div>
+                    </div>
                 </div>
             </div>
         ))}
@@ -100,24 +137,43 @@ export function Sidebar() {
         {/* Admin Link */}
         {(session?.user?.role === 'ADMIN' || session?.user?.role === 'MODERATOR') && (
             <div>
-                <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2 px-3">
-                    Система
-                </div>
-                <Link
-                    href="/admin"
+                 <button 
+                    onClick={() => toggleSection('Система')}
+                    className="w-full flex items-center justify-between text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2 px-3 py-2 hover:text-white hover:bg-white/5 rounded-lg transition-colors group/header"
+                >
+                    <span>Система</span>
+                    <ChevronRight 
+                        className={cn(
+                            "w-3 h-3 text-gray-600 group-hover/header:text-white transition-transform duration-300",
+                            openSections['Система'] ? "rotate-90" : "rotate-0"
+                        )} 
+                    />
+                </button>
+
+                <div
                     className={cn(
-                        "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all group",
-                        pathname.startsWith('/admin')
-                        ? "bg-[#e81c5a]/10 text-[#e81c5a]" 
-                        : "text-gray-400 hover:text-white hover:bg-white/5"
+                        "grid transition-all duration-300 ease-in-out",
+                        openSections['Система'] ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"
                     )}
                 >
-                    <Users className={cn(
-                        "w-5 h-5",
-                        pathname.startsWith('/admin') ? "text-[#e81c5a]" : "text-gray-500 group-hover:text-white"
-                    )} />
-                    Админ панель
-                </Link>
+                    <div className="overflow-hidden">
+                        <Link
+                            href="/admin"
+                            className={cn(
+                                "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all group ml-2 mb-2",
+                                pathname.startsWith('/admin')
+                                ? "bg-[#e81c5a]/10 text-[#e81c5a]" 
+                                : "text-gray-400 hover:text-white hover:bg-white/5"
+                            )}
+                        >
+                            <Users className={cn(
+                                "w-4 h-4",
+                                pathname.startsWith('/admin') ? "text-[#e81c5a]" : "text-gray-500 group-hover:text-white"
+                            )} />
+                            Админ панель
+                        </Link>
+                    </div>
+                </div>
             </div>
         )}
 

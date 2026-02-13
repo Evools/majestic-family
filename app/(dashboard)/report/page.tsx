@@ -1,202 +1,15 @@
 'use client';
 
+import { ContractHeader } from '@/components/report/contract-header';
+import { ParticipantSelector } from '@/components/report/participant-selector';
+import { ReportFormFields } from '@/components/report/report-form-fields';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { CustomSelect } from '@/components/ui/custom-select';
-import { Input } from '@/components/ui/input';
-import { Contract } from '@prisma/client';
-import { AlertCircle, CheckCircle2, DollarSign, Star, Trash2, Users } from 'lucide-react';
+import { Member, ReportFormState, UserContractWithContract } from '@/types/report';
+import { AlertCircle, CheckCircle2 } from 'lucide-react';
+import { useSession } from 'next-auth/react';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
-
-import { useSession } from 'next-auth/react';
-
-type ReportForm = {
-  userContractId: string;
-  itemName: string;
-  quantity: string;
-  proof: string;
-  comment: string;
-  participantIds: string[];
-};
-
-type UserContractWithContract = {
-  id: string;
-  contractId: string;
-  status: string;
-  startedAt: string;
-  contract: Contract;
-};
-
-type Member = {
-  id: string;
-  name: string;
-  firstName: string;
-  lastName: string;
-  image: string | null;
-};
-
-
-const ContractHeader = ({ uc, onRemove }: { uc: UserContractWithContract, onRemove: () => void }) => (
-  <div className="flex items-start justify-between mb-6 pb-4 border-b border-white/10">
-    <div className="flex-1">
-      <div className="flex items-center gap-2 mb-2">
-        <h3 className="font-bold text-white text-lg tracking-tight">{uc.contract.title}</h3>
-        <span className="px-2 py-0.5 rounded bg-blue-500/10 text-blue-500 text-[10px] font-black uppercase tracking-widest border border-blue-500/20">
-          LVL {uc.contract.level}
-        </span>
-      </div>
-      {uc.contract.description && (
-        <p className="text-sm text-gray-400 mb-3">{uc.contract.description}</p>
-      )}
-      <div className="flex items-center gap-4 text-xs font-bold uppercase tracking-widest">
-        <div className="flex items-center gap-1.5 text-green-500">
-          <DollarSign className="w-3.5 h-3.5" />
-          <span>${uc.contract.reward.toLocaleString()}</span>
-        </div>
-        <div className="flex items-center gap-1.5 text-yellow-500">
-          <Star className="w-3.5 h-3.5" />
-          <span>+{uc.contract.reputation} XP</span>
-        </div>
-      </div>
-    </div>
-    <Button
-      variant="ghost"
-      size="sm"
-      className="text-gray-500 hover:text-red-500 hover:bg-red-500/5 transition-colors"
-      onClick={onRemove}
-    >
-      <Trash2 className="w-4 h-4" />
-    </Button>
-  </div>
-);
-
-const ReportFormFields = ({ form, index, onUpdate }: { form: ReportForm, index: number, onUpdate: (field: keyof ReportForm, value: any) => void }) => (
-  <div className="space-y-4 mb-6">
-    <div className="grid grid-cols-2 gap-4">
-      <div className="space-y-2">
-        <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Предмет</label>
-        <Input 
-          placeholder="Например: Кабель" 
-          className="bg-[#050505] border-white/10 text-sm text-white placeholder:text-gray-700 focus-visible:ring-blue-500/30" 
-          value={form.itemName}
-          onChange={(e) => onUpdate('itemName', e.target.value)}
-        />
-      </div>
-      <div className="space-y-2">
-        <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Количество</label>
-        <Input 
-          type="number" 
-          placeholder="0" 
-          min="1"
-          className="bg-[#050505] border-white/10 text-sm text-white placeholder:text-gray-700 focus-visible:ring-blue-500/30" 
-          value={form.quantity}
-          onChange={(e) => onUpdate('quantity', e.target.value)}
-        />
-      </div>
-    </div>
-
-    <div className="space-y-2">
-      <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Доказательства</label>
-      <Input 
-        placeholder="Ссылка на Imgur / YouTube" 
-        className="bg-[#050505] border-white/10 text-sm text-white placeholder:text-gray-700 focus-visible:ring-blue-500/30" 
-        value={form.proof}
-        onChange={(e) => onUpdate('proof', e.target.value)}
-      />
-    </div>
-
-    <div className="space-y-2">
-      <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Комментарий</label>
-      <textarea 
-        className="w-full min-h-[80px] bg-[#050505] border border-white/10 rounded-xl p-3 text-sm text-white placeholder:text-gray-700 focus:outline-none focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/30 resize-y transition-all"
-        placeholder="Дополнительные детали..."
-        value={form.comment}
-        onChange={(e) => onUpdate('comment', e.target.value)}
-      />
-    </div>
-  </div>
-);
-
-const ParticipantSelector = ({ 
-  selectedIds, 
-  members, 
-  session, 
-  onAdd, 
-  onRemove 
-}: { 
-  selectedIds: string[], 
-  members: Member[], 
-  session: any, 
-  onAdd: (id: string) => void, 
-  onRemove: (id: string) => void 
-}) => (
-  <div className="space-y-4 pt-6 border-t border-white/10">
-    <div className="flex items-center justify-between">
-        <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest flex items-center gap-2">
-           <Star className="w-3 h-3 text-yellow-500" />
-           Доп. участники
-        </label>
-        <span className="text-[9px] font-bold text-gray-500 uppercase tracking-widest">
-            {selectedIds.length + 1} чел.
-        </span>
-    </div>
-    
-    <div className="flex flex-wrap gap-2">
-        {/* Current User Tag */}
-        <div className="pl-1.5 pr-3 py-1.5 rounded-full bg-blue-500/5 border border-blue-500/20 text-[10px] text-blue-500/80 font-bold uppercase tracking-widest flex items-center gap-2.5">
-            {session?.user?.image ? (
-                <img src={session.user.image} alt="" className="w-5 h-5 rounded-full object-cover border border-blue-500/30" />
-            ) : (
-                <div className="w-5 h-5 rounded-full bg-blue-500/20 flex items-center justify-center border border-blue-500/30">
-                    <Users className="w-2.5 h-2.5" />
-                </div>
-            )}
-            {session?.user?.name} (Вы)
-        </div>
-        
-        {/* Participant Tags */}
-        {selectedIds.map(pid => {
-            const member = members.find(m => m.id === pid);
-            if (!member) return null;
-            return (
-                <div key={pid} className="pl-1.5 pr-1.5 py-1.5 rounded-full bg-white/5 border border-white/10 text-[10px] text-gray-300 font-bold uppercase tracking-widest flex items-center gap-3 group/tag hover:border-white/30 transition-all shadow-sm">
-                    <div className="flex items-center gap-2.5">
-                        {member.image ? (
-                            <img src={member.image} alt="" className="w-5 h-5 rounded-full object-cover border border-white/20" />
-                        ) : (
-                            <div className="w-5 h-5 rounded-full bg-white/10 flex items-center justify-center border border-white/20 text-gray-400">
-                                <Users className="w-2.5 h-2.5" />
-                            </div>
-                        )}
-                        <span className="max-w-[100px] truncate">{member.firstName || member.name}</span>
-                    </div>
-                    <button 
-                        onClick={() => onRemove(pid)}
-                        className="w-5 h-5 flex items-center justify-center rounded-full bg-white/10 text-gray-500 hover:text-red-500 hover:bg-red-500/20 transition-all"
-                    >
-                        <Trash2 className="w-3 h-3" />
-                    </button>
-                </div>
-            );
-        })}
-    </div>
-
-    <CustomSelect 
-        placeholder="Добавить напарника..."
-        options={members
-            .filter(m => m.id !== (session?.user as any)?.id && !selectedIds.includes(m.id))
-            .map(m => ({
-                value: m.id,
-                label: m.firstName ? `${m.firstName} (${m.name})` : m.name
-            }))
-        }
-        value=""
-        onChange={onAdd}
-        className="max-w-xs"
-    />
-  </div>
-);
 
 // --- Main Page ---
 
@@ -205,7 +18,7 @@ export default function ReportPage() {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [activeContracts, setActiveContracts] = useState<UserContractWithContract[]>([]);
     const [loading, setLoading] = useState(true);
-    const [reportForms, setReportForms] = useState<ReportForm[]>([]);
+    const [reportForms, setReportForms] = useState<ReportFormState[]>([]);
     const [successCount, setSuccessCount] = useState(0);
     const [members, setMembers] = useState<Member[]>([]);
   
@@ -247,7 +60,7 @@ export default function ReportPage() {
       }
     };
 
-    const updateForm = (index: number, field: keyof ReportForm, value: any) => {
+    const updateForm = (index: number, field: keyof ReportFormState, value: ReportFormState[keyof ReportFormState]) => {
       setReportForms(prev => {
         const updated = [...prev];
         updated[index] = { ...updated[index], [field]: value };

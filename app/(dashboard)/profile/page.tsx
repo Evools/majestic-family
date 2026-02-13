@@ -28,8 +28,6 @@ type ProfileData = {
         approvedReports: number;
         activeContracts: number;
     };
-    activeContracts: any[];
-    recentActivity: any[];
 };
 
 export default function ProfilePage() {
