@@ -1,4 +1,5 @@
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { sendReportActionNotification } from "@/lib/discord";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
@@ -190,6 +191,17 @@ export async function PUT(req: Request) {
         return updatedReport;
       });
 
+      // Send Notification (non-blocking)
+      // Re-fetch report with user info for notification
+      const reportForNotify = await prisma.report.findUnique({
+        where: { id: report.id },
+        include: { user: true }
+      });
+
+      if (reportForNotify) {
+        sendReportActionNotification(reportForNotify, session.user, 'approve').catch(console.error);
+      }
+
       return NextResponse.json({ success: true, report });
 
     } else if (action === "reject") {
@@ -204,7 +216,12 @@ export async function PUT(req: Request) {
           rejectionReason,
           verifierId: session.user.id,
         },
+        include: { user: true }
       });
+
+      // Send Notification (non-blocking)
+      sendReportActionNotification(report, session.user, 'reject', rejectionReason).catch(console.error);
+
       return NextResponse.json({ success: true, report });
     }
 

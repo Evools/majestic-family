@@ -206,15 +206,26 @@ export default function AdminReportsPage() {
                             </span>
                         </div>
                         <div className="flex items-center gap-3">
-                            <a 
-                                href={report.proof} 
-                                target="_blank" 
-                                rel="noopener noreferrer"
-                                className="flex items-center gap-1.5 text-[10px] font-bold text-[#e81c5a] hover:text-[#ff2d6d] uppercase tracking-widest transition-colors group/link"
-                            >
-                                <ExternalLink className="w-3.5 h-3.5 group-hover/link:scale-110 transition-transform" />
-                                Доказательства
-                            </a>
+                            {report.proof ? (
+                                <div className="flex flex-wrap gap-2 mt-1">
+                                    {report.proof.split(',').filter(Boolean).map((url, index) => (
+                                        <a 
+                                            key={index}
+                                            href={url} 
+                                            target="_blank" 
+                                            rel="noopener noreferrer"
+                                            className="relative group/image block w-12 h-12 rounded-lg overflow-hidden border border-white/10 hover:border-[#e81c5a] transition-all"
+                                        >
+                                            <img src={url} alt={`Proof ${index + 1}`} className="w-full h-full object-cover" />
+                                            <div className="absolute inset-0 bg-black/0 group-hover/image:bg-black/20 transition-colors flex items-center justify-center">
+                                                <ExternalLink className="w-3 h-3 text-white opacity-0 group-hover/image:opacity-100 transition-opacity" />
+                                            </div>
+                                        </a>
+                                    ))}
+                                </div>
+                            ) : (
+                                <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Нет доказательств</span>
+                            )}
                             {report.comment && (
                                 <span className="text-[10px] font-medium text-gray-500 italic truncate max-w-[200px]">
                                     "{report.comment}"

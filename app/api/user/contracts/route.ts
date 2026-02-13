@@ -75,7 +75,11 @@ export async function GET() {
     });
 
     // Separate active and completed
-    const active = userContracts.filter(uc => uc.status === 'ACTIVE');
+    // Filter out active contracts that already have a PENDING report
+    const active = userContracts.filter(uc =>
+      uc.status === 'ACTIVE' &&
+      !uc.reports.some(r => r.status === 'PENDING')
+    );
     const completed = userContracts.filter(uc => uc.status === 'COMPLETED');
 
     const settings = await prisma.systemSettings.findFirst();
@@ -198,9 +202,9 @@ export async function POST(req: Request) {
     if (contract.category && contract.category !== "General") {
       const sameCategoryActive = activeCountList.some(uc => uc.contract.category === contract.category);
       if (sameCategoryActive) {
-        return NextResponse.json({ 
-          error: "Category limit reached", 
-          message: `У вас уже есть активный контракт в категории "${contract.category}". Завершите его, прежде чем брать новый этого же типа.` 
+        return NextResponse.json({
+          error: "Category limit reached",
+          message: `У вас уже есть активный контракт в категории "${contract.category}". Завершите его, прежде чем брать новый этого же типа.`
         }, { status: 400 });
       }
     }

@@ -1,5 +1,6 @@
 import { Input } from '@/components/ui/input';
 import { ReportFormState } from '@/types/report';
+import { ImageUpload } from '../ui/image-upload';
 
 interface ReportFormFieldsProps {
     form: ReportFormState;
@@ -34,12 +35,10 @@ export function ReportFormFields({ form, index, onUpdate }: ReportFormFieldsProp
             </div>
 
             <div className="space-y-2">
-                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Доказательства</label>
-                <Input
-                    placeholder="Ссылка на Imgur / YouTube"
-                    className="bg-[#050505] border-white/10 text-sm text-white placeholder:text-gray-700 focus-visible:ring-blue-500/30"
+                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Доказательства (Скриншот)</label>
+                <ImageUpload
                     value={form.proof}
-                    onChange={(e) => onUpdate('proof', e.target.value)}
+                    onChange={(url) => onUpdate('proof', url)}
                 />
             </div>
 

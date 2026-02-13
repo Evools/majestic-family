@@ -25,7 +25,8 @@ export default function AdminSettingsPage() {
     xpMultiplier: 1.5,
     baseXPRequired: 1000,
     discordWebhook: '',
-    notifyNewReports: true,
+    notifyNewReports: false,
+    notifyAdminActions: false,
   });
 
   useEffect(() => {
@@ -49,7 +50,8 @@ export default function AdminSettingsPage() {
           xpMultiplier: data.xpMultiplier || 1.5,
           baseXPRequired: data.baseXPRequired || 1000,
           discordWebhook: data.discordWebhook || '',
-          notifyNewReports: data.notifyNewReports !== undefined ? data.notifyNewReports : true,
+          notifyNewReports: data.notifyNewReports !== undefined ? data.notifyNewReports : false,
+          notifyAdminActions: data.notifyAdminActions !== undefined ? data.notifyAdminActions : false,
         });
       }
     } catch (err) {
@@ -335,9 +337,15 @@ export default function AdminSettingsPage() {
                 </div>
                 
                 <Checkbox
-                  label="Уведомления о новых отчетах"
+                  label="Уведомления о новых отчетах (Создание)"
                   checked={formData.notifyNewReports}
                   onChange={(e) => setFormData({ ...formData, notifyNewReports: e.target.checked })}
+                />
+                
+                <Checkbox
+                  label="Уведомления о проверке (Одобрение/Отказ)"
+                  checked={formData.notifyAdminActions}
+                  onChange={(e) => setFormData({ ...formData, notifyAdminActions: e.target.checked })}
                 />
               </div>
             </CardContent>

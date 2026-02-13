@@ -53,7 +53,8 @@ export async function POST(req: Request) {
           contractType: userContract.contract.title, // Use contract title as type
           itemName,
           quantity: parseInt(quantity),
-          proof,
+          // Handle proof: if array, join with comma; if string, use as is
+          proof: Array.isArray(proof) ? proof.join(',') : proof,
           comment,
         },
       });

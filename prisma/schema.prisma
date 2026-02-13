@@ -57,26 +57,27 @@ model User {
 }
 
 model Report {
-  id              String              @id @default(cuid())
-  userId          String
-  contractType    String
-  itemName        String
-  quantity        Int
-  proof           String
-  comment         String?
-  createdAt       DateTime            @default(now())
-  updatedAt       DateTime            @updatedAt
-  familyShare     Float?              @default(0)
-  rejectionReason String?
-  userShare       Float?              @default(0)
-  value           Float?              @default(0)
-  verifierId      String?
-  status          ReportStatus        @default(PENDING)
-  userContractId  String?
-  userContract    UserContract?       @relation(fields: [userContractId], references: [id])
-  user            User                @relation(fields: [userId], references: [id], onDelete: Cascade)
-  verifier        User?               @relation("Verifier", fields: [verifierId], references: [id])
-  participants    ReportParticipant[]
+  id               String              @id @default(cuid())
+  userId           String
+  contractType     String
+  itemName         String
+  quantity         Int
+  proof            String
+  comment          String?
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
+  familyShare      Float?              @default(0)
+  rejectionReason  String?
+  userShare        Float?              @default(0)
+  value            Float?              @default(0)
+  verifierId       String?
+  discordMessageId String?
+  status           ReportStatus        @default(PENDING)
+  userContractId   String?
+  userContract     UserContract?       @relation(fields: [userContractId], references: [id])
+  user             User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  verifier         User?               @relation("Verifier", fields: [verifierId], references: [id])
+  participants     ReportParticipant[]
 }
 
 model ReportParticipant {
@@ -165,7 +166,8 @@ model SystemSettings {
   xpMultiplier          Float    @default(1.5)
   baseXPRequired        Int      @default(1000)
   discordWebhook        String?
-  notifyNewReports      Boolean  @default(true)
+  notifyNewReports      Boolean  @default(false)
+  notifyAdminActions    Boolean  @default(false)
   updatedAt             DateTime @updatedAt
   createdAt             DateTime @default(now())
   maxActiveContracts    Int      @default(10)
