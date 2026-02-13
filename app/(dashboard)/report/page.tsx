@@ -1,12 +1,12 @@
 'use client';
 
-import { ContractHeader } from '@/components/report/contract-header';
 import { ParticipantSelector } from '@/components/report/participant-selector';
 import { ReportFormFields } from '@/components/report/report-form-fields';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { useToast } from '@/components/ui/notifications/notification-context';
 import { Member, ReportFormState, UserContractWithContract } from '@/types/report';
-import { AlertCircle, CheckCircle2 } from 'lucide-react';
+import { AlertCircle, ChevronDown, Send } from 'lucide-react';
 import { useSession } from 'next-auth/react';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
@@ -15,13 +15,16 @@ import { useEffect, useState } from 'react';
 
 export default function ReportPage() {
     const { data: session } = useSession();
+    const { addToast } = useToast();
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [activeContracts, setActiveContracts] = useState<UserContractWithContract[]>([]);
     const [loading, setLoading] = useState(true);
     const [reportForms, setReportForms] = useState<ReportFormState[]>([]);
-    const [successCount, setSuccessCount] = useState(0);
     const [members, setMembers] = useState<Member[]>([]);
-  
+    
+    // Accordion State: store the ID of the currently expanded contract
+    const [expandedIds, setExpandedIds] = useState<string[]>([]);
+
     useEffect(() => {
       fetchActiveContracts();
       fetchMembers();
@@ -43,8 +46,9 @@ export default function ReportPage() {
         const res = await fetch('/api/user/contracts');
         if (res.ok) {
           const data = await res.json();
-          setActiveContracts(data.active || []);
-          setReportForms(data.active?.map((uc: UserContractWithContract) => ({
+          const contracts = data.active || [];
+          setActiveContracts(contracts);
+          setReportForms(contracts.map((uc: UserContractWithContract) => ({
             userContractId: uc.id,
             itemName: '',
             quantity: '',
@@ -52,9 +56,19 @@ export default function ReportPage() {
             comment: '',
             participantIds: [],
           })) || []);
+
+          // Auto-expand the first contract if exists
+          if (contracts.length > 0) {
+            setExpandedIds([contracts[0].id]);
+          }
         }
       } catch (error) {
         console.error('Failed to fetch active contracts:', error);
+        addToast({
+            type: 'error',
+            title: 'Ошибка',
+            message: 'Не удалось загрузить контракты',
+        });
       } finally {
         setLoading(false);
       }
@@ -69,50 +83,75 @@ export default function ReportPage() {
     };
 
     const removeForm = (index: number) => {
+      const contractId = activeContracts[index]?.id;
       setReportForms(prev => prev.filter((_, i) => i !== index));
       setActiveContracts(prev => prev.filter((_, i) => i !== index));
+      if (contractId) {
+          setExpandedIds(prev => prev.filter(id => id !== contractId));
+      }
     };
 
-    const handleSubmitAll = async () => {
-      const filledForms = reportForms.filter(form => 
-        form.itemName && form.quantity && form.proof
-      );
+    const toggleExpand = (id: string) => {
+        setExpandedIds(prev => 
+            prev.includes(id) 
+                ? prev.filter(i => i !== id) 
+                : [id] // Close others when opening one (Accordion behavior), or [...prev, id] for multiple
+        );
+    };
 
-      if (filledForms.length === 0) {
-        alert('Заполните хотя бы один отчет');
-        return;
-      }
+    const handleSubmitSingle = async (index: number) => {
+        const form = reportForms[index];
+        if (!form || !form.itemName || !form.quantity || !form.proof) {
+            addToast({
+                type: 'warning',
+                title: 'Внимание',
+                message: 'Пожалуйста, заполните все обязательные поля (Предмет, Кол-во, Доказательства)',
+            });
+            return;
+        }
 
-      setIsSubmitting(true);
-      let successfulSubmissions = 0;
-
-      try {
-        for (const form of filledForms) {
-          try {
+        setIsSubmitting(true);
+        try {
             const response = await fetch('/api/report', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify(form),
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(form),
             });
 
             if (response.ok) {
-              successfulSubmissions++;
+                addToast({
+                    type: 'success',
+                    title: 'Отчет отправлен',
+                    message: 'Ваш отчет успешно отправлен на проверку.',
+                });
+                removeForm(index);
+            } else {
+                addToast({
+                    type: 'error',
+                    title: 'Ошибка',
+                    message: 'Произошла ошибка при отправке отчета.',
+                });
             }
-          } catch (error) {
+        } catch (error) {
             console.error('Error submitting report:', error);
-          }
+            addToast({
+                type: 'error',
+                title: 'Ошибка сервера',
+                message: 'Не удалось соединиться с сервером.',
+            });
+        } finally {
+            setIsSubmitting(false);
         }
-
-        setSuccessCount(successfulSubmissions);
-        await fetchActiveContracts();
-        setTimeout(() => setSuccessCount(0), 4000);
-      } finally {
-        setIsSubmitting(false);
-      }
+    };
+    
+    // Check if form has minimum required data
+    const isFormReady = (index: number) => {
+        const form = reportForms[index];
+        return form && form.itemName && form.quantity && form.proof;
     };
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-700">
+    <div className="space-y-8 animate-in fade-in duration-700 mx-auto">
       <div className="flex items-center justify-between mb-2">
         <div>
             <h1 className="text-3xl font-black text-white tracking-tight mb-1">Новый отчет</h1>
@@ -140,84 +179,114 @@ export default function ReportPage() {
           </CardContent>
         </Card>
       ) : (
-        <>
-          {successCount > 0 && (
-            <div className="p-4 rounded-xl bg-green-500/5 border border-green-500/20 flex items-center gap-4 animate-in slide-in-from-top-2">
-              <div className="w-10 h-10 rounded-full bg-green-500/10 flex items-center justify-center shrink-0">
-                <CheckCircle2 className="w-5 h-5 text-green-500" />
-              </div>
-              <div>
-                <p className="text-sm font-black text-white uppercase tracking-tight">
-                  {successCount} {successCount === 1 ? 'отчет' : 'отчета'} успешно отправлен{successCount > 1 ? 'о' : ''}!
-                </p>
-                <p className="text-xs font-bold text-green-500/60 uppercase tracking-widest mt-0.5">Средства будут зачислены после проверки.</p>
-              </div>
-            </div>
-          )}
-
-          <div className="space-y-6">
+        <div className="space-y-4">
             {activeContracts.map((uc, index) => {
               const form = reportForms[index];
               if (!form) return null;
+              const isExpanded = expandedIds.includes(uc.id);
+              const ready = isFormReady(index);
 
               return (
-                <Card key={uc.id} className="bg-[#0a0a0a] border-white/10 hover:border-white/20 transition-all duration-300 shadow-[0_0_30px_rgba(0,0,0,0.5)]">
-                  <CardContent className="p-6">
-                    <ContractHeader uc={uc} onRemove={() => removeForm(index)} />
-                    
-                    <ReportFormFields 
-                      form={form} 
-                      index={index} 
-                      onUpdate={(field, value) => updateForm(index, field, value)} 
-                    />
+                <div key={uc.id} className="group relative">
+                    <Card className={`bg-[#0a0a0a] border-white/10 transition-all duration-300 overflow-hidden ${isExpanded ? 'shadow-[0_0_30px_rgba(0,0,0,0.3)] border-white/20' : 'hover:border-white/20'}`}>
+                        {/* Header Area - Clickable to toggle */}
+                        <div 
+                            onClick={() => toggleExpand(uc.id)}
+                            className="p-6 cursor-pointer flex items-start justify-between gap-4 select-none relative z-10 bg-[#0a0a0a]"
+                        >
+                            <div className="flex-1">
+                                <div className="flex items-center gap-3 mb-2">
+                                    <h3 className={`font-bold text-lg tracking-tight transition-colors ${isExpanded ? 'text-white' : 'text-gray-300 group-hover:text-white'}`}>
+                                        {uc.contract.title}
+                                    </h3>
+                                    {ready && !isExpanded && (
+                                        <span className="px-2 py-0.5 rounded-full bg-green-500/20 text-green-500 text-[9px] font-black uppercase tracking-widest border border-green-500/30 animate-pulse">
+                                            Готов к отправке
+                                        </span>
+                                    )}
+                                </div>
+                                <div className="flex items-center gap-4 text-xs font-bold uppercase tracking-widest text-gray-500">
+                                    <span className="text-blue-400">LVL {uc.contract.level}</span>
+                                    <span className="w-1 h-1 rounded-full bg-gray-700" />
+                                    <span className="text-green-500/80">${uc.contract.reward.toLocaleString()}</span>
+                                </div>
+                            </div>
+                            <div className={`w-8 h-8 rounded-full border border-white/10 flex items-center justify-center transition-all duration-300 ${isExpanded ? 'bg-white text-black rotate-180' : 'bg-transparent text-gray-500 group-hover:border-white/30 group-hover:text-white'}`}>
+                                <ChevronDown className="w-4 h-4" />
+                            </div>
+                        </div>
 
-                    <ParticipantSelector 
-                      selectedIds={form.participantIds}
-                      members={members}
-                      session={session}
-                      onAdd={(val) => {
-                        const updatedIds = [...form.participantIds, val];
-                        updateForm(index, 'participantIds', updatedIds);
-                      }}
-                      onRemove={(pid) => {
-                        const updatedIds = form.participantIds.filter(id => id !== pid);
-                        updateForm(index, 'participantIds', updatedIds);
-                      }}
-                    />
-                  </CardContent>
-                </Card>
+                        {/* Expandable Content with Grid Animation */}
+                        <div 
+                            className={`grid transition-[grid-template-rows] duration-500 ease-in-out ${isExpanded ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'}`}
+                        >
+                            <div className="overflow-hidden">
+                                <div className="rounded-b-xl border-t border-white/5 bg-[#050505]/50">
+                                    <CardContent className="p-6">
+                                        <div className="mb-6 flex items-start p-4 bg-blue-500/5 border border-blue-500/10 rounded-xl gap-3">
+                                            <AlertCircle className="w-5 h-5 text-blue-500 shrink-0 mt-0.5" />
+                                            <div className="space-y-1">
+                                                <p className="text-xs font-bold text-blue-200">Информация о контракте</p>
+                                                <p className="text-[11px] text-blue-200/60 leading-relaxed">{uc.contract.description || "Нет описания"}</p>
+                                            </div>
+                                        </div>
+
+                                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                                            <div>
+                                                 <ReportFormFields 
+                                                    form={form} 
+                                                    index={index} 
+                                                    onUpdate={(field, value) => updateForm(index, field, value)} 
+                                                />
+                                            </div>
+                                            <div className="lg:border-l lg:border-white/10 lg:pl-8">
+                                                <ParticipantSelector 
+                                                    selectedIds={form.participantIds}
+                                                    members={members}
+                                                    session={session}
+                                                    onAdd={(val) => {
+                                                        const updatedIds = [...form.participantIds, val];
+                                                        updateForm(index, 'participantIds', updatedIds);
+                                                    }}
+                                                    onRemove={(pid) => {
+                                                        const updatedIds = form.participantIds.filter(id => id !== pid);
+                                                        updateForm(index, 'participantIds', updatedIds);
+                                                    }}
+                                                />
+                                            </div>
+                                        </div>
+
+                                        <div className="mt-8 pt-6 border-t border-white/10 flex items-center justify-between">
+                                            <Button 
+                                                variant="ghost" 
+                                                onClick={(e) => { e.stopPropagation(); removeForm(index); }}
+                                                className="text-gray-500 hover:text-red-500 hover:bg-red-500/5 text-xs font-bold uppercase tracking-widest"
+                                            >
+                                                Отказаться
+                                            </Button>
+                                            <Button 
+                                                className="bg-[#e81c5a] hover:bg-[#c21548] text-white text-xs font-black uppercase tracking-widest h-12 px-8 shadow-lg shadow-[#e81c5a]/20" 
+                                                onClick={() => handleSubmitSingle(index)}
+                                                disabled={isSubmitting}
+                                            >
+                                                {isSubmitting ? 'Отправка...' : 'Отправить отчет'} <Send className="w-4 h-4 ml-2" />
+                                            </Button>
+                                        </div>
+                                    </CardContent>
+                                </div>
+                            </div>
+                        </div>
+                    </Card>
+                </div>
               );
             })}
           </div>
-
-          <div className="flex items-center justify-between gap-4 pt-4">
-            <div className="flex items-center gap-4">
-                 <div className="p-4 border border-white/10 rounded-xl bg-[#0a0a0a]/50 max-w-[300px]">
-                    <h4 className="font-black text-white text-[10px] uppercase tracking-widest mb-1.5 flex items-center gap-2">
-                        <AlertCircle className="w-3 h-3 text-red-500" />
-                        Важно
-                    </h4>
-                    <p className="text-[9px] font-bold text-gray-400 leading-relaxed uppercase tracking-widest">
-                        Срок действия доказательств - 24 часа. На видео должно быть видно время.
-                    </p>
-                </div>
-            </div>
-
-            <div className="flex items-center gap-3">
-                <Link href="/contracts">
-                  <Button variant="ghost" className="text-xs font-bold text-gray-500 uppercase tracking-widest hover:text-white">Отмена</Button>
-                </Link>
-                <Button 
-                  className="bg-[#e81c5a] hover:bg-[#c21548] text-white text-xs font-black uppercase tracking-widest h-12 px-8 shadow-lg shadow-[#e81c5a]/20" 
-                  onClick={handleSubmitAll}
-                  disabled={isSubmitting}
-                >
-                  {isSubmitting ? 'Отправка...' : `Отправить отчеты (${reportForms.filter(f => f.itemName && f.quantity && f.proof).length})`}
-                </Button>
-            </div>
-          </div>
-        </>
       )}
+      <div className="flex items-center justify-center pt-8 pb-12">
+            <p className="text-[10px] font-bold text-gray-600 uppercase tracking-widest">
+            Всего активных контрактов: {activeContracts.length}
+            </p>
+      </div>
     </div>
   );
 }
