@@ -37,8 +37,8 @@ export function ReportFormFields({ form, index, onUpdate }: ReportFormFieldsProp
             <div className="space-y-2">
                 <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Доказательства (Скриншот)</label>
                 <ImageUpload
-                    value={form.proof}
-                    onChange={(url) => onUpdate('proof', url)}
+                    value={form.proof ? form.proof.split(',').filter(Boolean) : []}
+                    onChange={(urls) => onUpdate('proof', urls.join(','))}
                 />
             </div>
 

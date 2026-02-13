@@ -13,11 +13,6 @@ export function WelcomeBanner({ displayName }: WelcomeBannerProps) {
                 <p className="text-gray-400">Сегодня отличный день для ведения бизнеса.</p>
             </div>
             <div className="flex gap-3">
-                <Link href="/wiki">
-                    <Button className="bg-white/5 hover:bg-white/10 text-white border border-white/10">
-                        База знаний
-                    </Button>
-                </Link>
                 <Link href="/contracts">
                     <Button className="bg-[#e81c5a] hover:bg-[#c21548] text-white shadow-[0_0_20px_rgba(232,28,90,0.3)]">
                         Взять контракт
