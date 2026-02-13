@@ -1,3 +1,4 @@
+import { sendNewReportNotification } from "@/lib/discord";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
@@ -74,6 +75,9 @@ export async function POST(req: Request) {
 
       return newReport;
     });
+
+    // Send Discord Notification (non-blocking)
+    sendNewReportNotification(report, user).catch((err: unknown) => console.error("Discord Notification error:", err));
 
     return NextResponse.json({ success: true, report });
   } catch (error) {

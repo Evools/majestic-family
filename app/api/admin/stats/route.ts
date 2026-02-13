@@ -1,5 +1,5 @@
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
-import { prisma } from "@/lib/prisma";
+import { getAdminStats } from "@/lib/services/admin";
 import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
 
@@ -11,35 +11,9 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const [
-      totalMembers,
-      pendingReports,
-      activeContracts,
-      dashboardSettings,
-      recentReports
-    ] = await Promise.all([
-      prisma.user.count(),
-      prisma.report.count({ where: { status: 'PENDING' } }),
-      prisma.userContract.count({ where: { status: 'ACTIVE' } }),
-      prisma.dashboardSettings.findFirst(),
-      prisma.report.findMany({
-        take: 5,
-        orderBy: { createdAt: 'desc' },
-        include: {
-          user: {
-            select: { name: true, firstName: true, lastName: true, image: true }
-          }
-        }
-      })
-    ]);
+    const stats = await getAdminStats();
 
-    return NextResponse.json({
-      totalMembers,
-      pendingReports,
-      activeContracts,
-      familyBalance: dashboardSettings?.familyBalance || 0,
-      recentReports
-    });
+    return NextResponse.json(stats);
 
   } catch (error) {
     console.error("Error fetching admin stats:", error);
