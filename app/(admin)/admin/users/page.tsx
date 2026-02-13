@@ -1,11 +1,9 @@
 'use client'
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { CustomSelect } from '@/components/ui/custom-select';
-import { Dialog, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Role } from '@prisma/client';
-import { Award, Edit2, Shield, ShieldCheck, User as UserIcon } from 'lucide-react';
+import { Award, Check, Edit2, Shield, ShieldCheck, User as UserIcon, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
@@ -21,10 +19,8 @@ type UserWithRole = {
 export default function AdminUsersPage() {
   const [users, setUsers] = useState<UserWithRole[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedUser, setSelectedUser] = useState<UserWithRole | null>(null);
-  const [isEditOpen, setIsEditOpen] = useState(false); // Using separate state for dialog visibility
-  const [newRole, setNewRole] = useState<Role | null>(null);
-  const [newRank, setNewRank] = useState<number>(1);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editForm, setEditForm] = useState<{ role: Role, rank: number } | null>(null);
   const [isUpdating, setIsUpdating] = useState(false);
   const router = useRouter();
 
@@ -48,32 +44,40 @@ export default function AdminUsersPage() {
   };
 
   const handleEditClick = (user: UserWithRole) => {
-    setSelectedUser(user);
-    setNewRole(user.role);
-    setNewRank(user.rank || 1);
-    setIsEditOpen(true);
+    if (editingId === user.id) {
+      setEditingId(null);
+      setEditForm(null);
+    } else {
+      setEditingId(user.id);
+      setEditForm({ role: user.role, rank: user.rank || 1 });
+    }
   };
 
-  const handleSaveRole = async () => {
-    if (!selectedUser || !newRole) return;
+  const handleSave = async (userId: string) => {
+    if (!editForm) return;
     
     setIsUpdating(true);
-    // Optimistic update
     const previousUsers = [...users];
-    const updatedUser = { ...selectedUser, role: newRole, rank: newRank };
-    setUsers(prev => prev.map(u => u.id === selectedUser.id ? updatedUser : u));
+    
+    // Optimistic update
+    setUsers(prev => prev.map(u => 
+      u.id === userId 
+        ? { ...u, role: editForm.role, rank: editForm.rank } 
+        : u
+    ));
     
     try {
       const res = await fetch('/api/admin/users', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: selectedUser.id, role: newRole, rank: newRank }),
+        body: JSON.stringify({ userId: userId, role: editForm.role, rank: editForm.rank }),
       });
 
       if (!res.ok) {
         throw new Error('Failed to update user');
       }
-      setIsEditOpen(false);
+      setEditingId(null);
+      setEditForm(null);
     } catch (error) {
       console.error(error);
       setUsers(previousUsers); // Revert
@@ -109,123 +113,163 @@ export default function AdminUsersPage() {
       </div>
 
       <div className="grid gap-4">
-        {users.map((user) => (
-          <Card key={user.id} className="bg-[#0a0a0a] border border-[#1f1f1f]">
-            <CardContent className="p-4 flex items-center justify-between gap-4">
-              <div className="flex items-center gap-4">
-                {user.image ? (
-                   // eslint-disable-next-line @next/next/no-img-element
-                   <img src={user.image} alt={user.name || ''} className="w-10 h-10 rounded-full" />
-                ) : (
-                   <div className="w-10 h-10 rounded-full bg-gray-700 flex items-center justify-center">
-                      <span className="font-bold text-white">{user.name?.[0]}</span>
-                   </div>
-                )}
-                <div>
-                    <div className="flex items-center gap-2">
-                        <p className="font-bold text-white">{user.name}</p>
-                        {getRoleIcon(user.role)}
-                    </div>
-                    <div className="flex items-center gap-2 text-xs text-gray-500">
-                        <span>{user.email}</span>
-                        {user.rank > 0 && (
-                            <span className="flex items-center gap-1 text-yellow-500">
-                                <Award className="w-3 h-3" />
-                                Ранг: {user.rank}
-                            </span>
-                        )}
-                    </div>
-                </div>
-              </div>
+        {users.map((user) => {
+          const isEditing = editingId === user.id;
 
-              <div className="flex items-center gap-4">
-                <span className={`text-xs px-2 py-1 rounded-full border ${
-                    user.role === 'ADMIN' ? 'bg-red-500/10 text-red-500 border-red-500/20' :
-                    user.role === 'MODERATOR' ? 'bg-blue-500/10 text-blue-500 border-blue-500/20' :
-                    'bg-gray-500/10 text-gray-400 border-gray-500/20'
-                }`}>
-                    {getRoleLabel(user.role)}
-                </span>
-                
-                <Button 
-                    size="sm" 
-                    variant="ghost" 
-                    className="h-8 w-8 p-0"
-                    onClick={() => handleEditClick(user)}
-                >
-                    <Edit2 className="w-4 h-4 text-gray-400 hover:text-white" />
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-
-      <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
-        {selectedUser && (
-            <>
-                <DialogHeader>
-                    <DialogTitle>Редактирование пользователя</DialogTitle>
-                    <DialogDescription>
-                        Измените данные пользователя {selectedUser.name}. 
-                    </DialogDescription>
-                </DialogHeader>
-                
-                <div className="py-6 space-y-4">
-                    <div className="flex items-center gap-4 p-4 rounded-lg bg-[#0f0f0f] border border-[#1f1f1f]">
-                        {selectedUser.image ? (
-                           // eslint-disable-next-line @next/next/no-img-element
-                           <img src={selectedUser.image} alt={selectedUser.name || ''} className="w-12 h-12 rounded-full" />
-                        ) : (
-                           <div className="w-12 h-12 rounded-full bg-gray-700 flex items-center justify-center">
-                              <span className="font-bold text-white text-lg">{selectedUser.name?.[0]}</span>
-                           </div>
-                        )}
-                        <div>
-                            <p className="font-bold text-white text-lg">{selectedUser.name}</p>
-                            <p className="text-sm text-gray-500">{selectedUser.email}</p>
+          return (
+            <Card key={user.id} className={`bg-[#0a0a0a] border transition-colors duration-300 ${isEditing ? 'border-[#e81c5a]/50' : 'border-[#1f1f1f]'}`}>
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between gap-4">
+                  <div className="flex items-center gap-4">
+                    {user.image ? (
+                       // eslint-disable-next-line @next/next/no-img-element
+                       <img src={user.image} alt={user.name || ''} className="w-10 h-10 rounded-full" />
+                    ) : (
+                       <div className="w-10 h-10 rounded-full bg-gray-700 flex items-center justify-center">
+                          <span className="font-bold text-white">{user.name?.[0]}</span>
+                       </div>
+                    )}
+                    <div>
+                        <div className="flex items-center gap-2">
+                            <p className="font-bold text-white">{user.name}</p>
+                            {getRoleIcon(user.role)}
+                        </div>
+                        <div className="flex items-center gap-2 text-xs text-gray-500">
+                            <span>{user.email}</span>
+                            {user.rank > 0 && (
+                                <span className="flex items-center gap-1 text-yellow-500">
+                                    <Award className="w-3 h-3" />
+                                    Ранг: {user.rank}
+                                </span>
+                            )}
                         </div>
                     </div>
+                  </div>
 
-                    <div className="space-y-2">
-                        <label className="text-sm font-medium text-gray-400">Роль в системе</label>
-                        <CustomSelect 
-                            options={[
-                                { value: 'MEMBER', label: 'Участник (Доступ к общим функциям)' },
-                                { value: 'MODERATOR', label: 'Модератор (Проверка отчетов)' },
-                                { value: 'ADMIN', label: 'Администратор (Полный доступ)' },
-                            ]}
-                            value={newRole || 'MEMBER'}
-                            onChange={(val) => setNewRole(val as Role)}
-                            className="bg-[#0f0f0f]"
-                        />
-                    </div>
-
-                    <div className="space-y-2">
-                        <label className="text-sm font-medium text-gray-400">Ранг (Уровень доступа)</label>
-                        <Input
-                            type="number"
-                            min="1"
-                            max="100"
-                            value={newRank}
-                            onChange={(e) => setNewRank(parseInt(e.target.value) || 0)}
-                            className="bg-[#0f0f0f] border-[#1f1f1f] text-white"
-                        />
-                        <p className="text-xs text-gray-500">Укажите числовое значение ранга (например, 1-10)</p>
-                    </div>
+                  <div className="flex items-center gap-4">
+                    {!isEditing && (
+                      <span className={`text-xs px-2 py-1 rounded-full border ${
+                          user.role === 'ADMIN' ? 'bg-red-500/10 text-red-500 border-red-500/20' :
+                          user.role === 'MODERATOR' ? 'bg-blue-500/10 text-blue-500 border-blue-500/20' :
+                          'bg-gray-500/10 text-gray-400 border-gray-500/20'
+                      }`}>
+                          {getRoleLabel(user.role)}
+                      </span>
+                    )}
+                    
+                    <Button 
+                        size="sm" 
+                        variant={isEditing ? "secondary" : "ghost"}
+                        className={`h-8 w-8 p-0 ${isEditing ? 'bg-white text-black hover:bg-gray-200' : ''}`}
+                        onClick={() => handleEditClick(user)}
+                    >
+                        {isEditing ? <X className="w-4 h-4" /> : <Edit2 className="w-4 h-4 text-gray-400 hover:text-white" />}
+                    </Button>
+                  </div>
                 </div>
 
-                <DialogFooter>
-                    <Button variant="outline" onClick={() => setIsEditOpen(false)} className="border-[#1f1f1f] hover:bg-[#1f1f1f] text-white">
-                        Отмена
-                    </Button>
-                    <Button onClick={handleSaveRole} disabled={isUpdating} className="bg-[#e81c5a] hover:bg-[#c21548] text-white">
-                        {isUpdating ? 'Сохранение...' : 'Сохранить изменения'}
-                    </Button>
-                </DialogFooter>
-            </>
-        )}
-      </Dialog>
+                {isEditing && editForm && (
+                  <div className="mt-6 pt-6 border-t border-[#1f1f1f] animate-in slide-in-from-top-2 duration-200">
+                    <div className="space-y-6">
+                        <div className="space-y-3">
+                            <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Выберите роль</label>
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                {[
+                                  { id: 'MEMBER', label: 'Участник', icon: UserIcon, desc: 'Базовый доступ', color: 'gray' },
+                                  { id: 'MODERATOR', label: 'Модератор', icon: Shield, desc: 'Проверка отчетов', color: 'blue' },
+                                  { id: 'ADMIN', label: 'Администратор', icon: ShieldCheck, desc: 'Полный доступ', color: 'red' }
+                                ].map((roleOption) => {
+                                   const isSelected = editForm.role === roleOption.id;
+                                   const Icon = roleOption.icon;
+                                   
+                                   let borderColor = 'border-[#1f1f1f]';
+                                   let bgColor = 'bg-[#0f0f0f]';
+                                   let iconColor = 'text-gray-500';
+                                   
+                                   if (isSelected) {
+                                      bgColor = 'bg-[#1a1a1a]';
+                                      if (roleOption.color === 'blue') { borderColor = 'border-blue-500'; iconColor = 'text-blue-500'; }
+                                      else if (roleOption.color === 'red') { borderColor = 'border-red-500'; iconColor = 'text-red-500'; }
+                                      else { borderColor = 'border-white'; iconColor = 'text-white'; }
+                                   }
+
+                                   return (
+                                    <div 
+                                        key={roleOption.id}
+                                        onClick={() => setEditForm(prev => prev ? ({ ...prev, role: roleOption.id as Role }) : null)}
+                                        className={`cursor-pointer rounded-xl border p-3 flex flex-col gap-2 transition-all duration-200 hover:bg-[#1a1a1a] ${borderColor} ${bgColor}`}
+                                    >
+                                        <div className="flex justify-between items-start">
+                                            <Icon className={`w-5 h-5 ${iconColor}`} />
+                                            {isSelected && <div className={`w-2 h-2 rounded-full ${iconColor.replace('text-', 'bg-')}`} />}
+                                        </div>
+                                        <div>
+                                            <h3 className={`font-medium text-sm ${isSelected ? 'text-white' : 'text-gray-400'}`}>{roleOption.label}</h3>
+                                            <p className="text-xs text-gray-600">{roleOption.desc}</p>
+                                        </div>
+                                    </div>
+                                   );
+                                })}
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                            <div className="space-y-3">
+                                <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Ранг участника</label>
+                                <div className="bg-[#0f0f0f] border border-[#1f1f1f] rounded-xl p-3 flex items-center gap-3">
+                                    <div className="h-8 w-8 rounded-full bg-yellow-500/10 flex items-center justify-center">
+                                        <Award className="w-4 h-4 text-yellow-500" />
+                                    </div>
+                                    <div className="flex-1">
+                                        <Input
+                                            type="number"
+                                            min="1"
+                                            max="100"
+                                            value={editForm.rank}
+                                            onChange={(e) => setEditForm(prev => prev ? ({ ...prev, rank: parseInt(e.target.value) || 0 }) : null)}
+                                            className="bg-transparent border-none text-white h-8 text-lg font-mono focus-visible:ring-0 p-0"
+                                        />
+                                    </div>
+                                    <div className="flex gap-1">
+                                        <Button 
+                                            variant="ghost" 
+                                            size="sm" 
+                                            className="h-8 w-8 p-0 text-gray-400 hover:text-white"
+                                            onClick={() => setEditForm(prev => prev ? ({ ...prev, rank: Math.max(1, prev.rank - 1) }) : null)}
+                                        >
+                                            -
+                                        </Button>
+                                        <Button 
+                                            variant="ghost" 
+                                            size="sm" 
+                                            className="h-8 w-8 p-0 text-gray-400 hover:text-white"
+                                            onClick={() => setEditForm(prev => prev ? ({ ...prev, rank: prev.rank + 1 }) : null)}
+                                        >
+                                            +
+                                        </Button>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div className="flex items-end justify-end">
+                                <Button 
+                                    onClick={() => handleSave(user.id)} 
+                                    disabled={isUpdating} 
+                                    className="w-full sm:w-auto bg-[#e81c5a] hover:bg-[#c21548] text-white"
+                                >
+                                    {isUpdating ? <span className="animate-spin mr-2">⏳</span> : <Check className="w-4 h-4 mr-2" />}
+                                    Сохранить изменения
+                                </Button>
+                            </div>
+                        </div>
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          );
+        })}
+      </div>
     </div>
   );
 }
