@@ -1,4 +1,5 @@
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { OnlineUsersPopover } from "@/components/online-users-popover";
 import { Sidebar } from "@/components/sidebar"; // Reusing Sidebar for now, maybe custom later
 import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
@@ -49,6 +50,8 @@ export default async function AdminLayout({
             </div>
         </main>
       </div>
+      {/* Online Users Popover */}
+      <OnlineUsersPopover />
     </div>
   );
 }

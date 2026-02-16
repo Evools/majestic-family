@@ -1,6 +1,5 @@
 'use client';
 
-import { OnlineUsers } from '@/components/online-users';
 import { cn } from '@/lib/utils';
 import {
     Book,
@@ -178,9 +177,6 @@ export function Sidebar() {
             </div>
         )}
 
-        <div className="pt-2 px-3">
-          <OnlineUsers />
-        </div>
       </nav>
 
       {/* User Profile Footer */}
