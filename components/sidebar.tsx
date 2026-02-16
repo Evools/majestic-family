@@ -172,6 +172,7 @@ export function Sidebar() {
                             )} />
                             Админ панель
                         </Link>
+                        
                     </div>
                 </div>
             </div>

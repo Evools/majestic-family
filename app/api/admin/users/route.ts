@@ -1,4 +1,5 @@
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { logAction } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
 import { Role } from "@prisma/client";
 import { getServerSession } from "next-auth";
@@ -59,6 +60,8 @@ export async function PUT(req: Request) {
       data: updateData,
     });
 
+    await logAction('UPDATE_USER', userId, `Updated: ${Object.keys(updateData).join(', ')}`);
+
     return NextResponse.json(user);
   } catch (error) {
     console.error("Error updating user role:", error);
@@ -92,9 +95,20 @@ export async function DELETE(req: Request) {
     // Looking at schema from memory, we have `onDelete: Cascade` on the relation in RecruitmentApplication? 
     // Let's verify schema if needed, but usually we try to delete user.
 
+    // Fetch user details before deletion to log name/email
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { name: true, email: true }
+    });
+
     await prisma.user.delete({
       where: { id: userId },
     });
+
+    // Log with targetId as null (since user is gone) but include details
+    await logAction('DELETE_USER', null, `User deleted by admin: ${user?.name || 'Unknown'} (${user?.email || 'No email'})`);
+
+    await logAction('DELETE_USER', userId, 'User deleted by admin');
 
     return NextResponse.json({ message: "User deleted" });
   } catch (error) {

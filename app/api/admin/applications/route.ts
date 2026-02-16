@@ -1,4 +1,5 @@
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { logAction } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
@@ -57,6 +58,10 @@ export async function PATCH(req: Request) {
           data: { status: userStatus }
         });
       }
+    }
+
+    if (application.userId) {
+      await logAction('UPDATE_APPLICATION', application.userId, `Application status: ${status}`);
     }
 
     return NextResponse.json(application);

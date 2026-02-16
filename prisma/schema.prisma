@@ -57,6 +57,20 @@ model User {
   userContracts        UserContract[]
   password             String?
   application          RecruitmentApplication?
+  auditLogs            AuditLog[]              @relation("Actor")
+  targetedLogs         AuditLog[]              @relation("Target")
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  action    String
+  actorId   String
+  targetId  String?
+  details   String?
+  createdAt DateTime @default(now())
+
+  actor  User  @relation("Actor", fields: [actorId], references: [id], onDelete: Cascade)
+  target User? @relation("Target", fields: [targetId], references: [id], onDelete: SetNull)
 }
 
 model Report {

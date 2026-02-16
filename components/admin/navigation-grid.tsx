@@ -1,7 +1,7 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { AdminStats } from "@/types/admin";
-import { ClipboardList, FileText, LayoutDashboard, LucideIcon, Settings, UserPlus, Users, Wallet } from "lucide-react";
+import { Activity, ClipboardList, FileText, LayoutDashboard, LucideIcon, Settings, UserPlus, Users, Wallet } from "lucide-react";
 import Link from "next/link";
 
 interface AdminLink {
@@ -82,6 +82,14 @@ export function NavigationGrid({ stats }: NavigationGridProps) {
             icon: Settings,
             color: "text-gray-500",
             bgColor: "bg-gray-500/10",
+        },
+        {
+            title: "Логи",
+            description: "История действий.",
+            href: "/admin/logs",
+            icon: Activity,
+            color: "text-red-500",
+            bgColor: "bg-red-500/10",
         },
     ];
 
