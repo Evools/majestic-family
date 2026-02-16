@@ -54,6 +54,7 @@ model User {
   reportParticipations ReportParticipant[]
   sessions             Session[]
   userContracts        UserContract[]
+  password             String?
 }
 
 model Report {
