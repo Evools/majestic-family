@@ -1,6 +1,8 @@
-'use client'
+'use client';
+
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { Dialog, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import { Role, UserStatus } from '@prisma/client';
@@ -18,12 +20,14 @@ type UserWithRole = {
   status: UserStatus;
 };
 
+
 export default function AdminUsersPage() {
   const [users, setUsers] = useState<UserWithRole[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<{ role: Role, rank: number, status: UserStatus } | null>(null);
   const [isUpdating, setIsUpdating] = useState(false);
+  const [userToDelete, setUserToDelete] = useState<string | null>(null);
   const router = useRouter();
 
   useEffect(() => {
@@ -93,6 +97,28 @@ export default function AdminUsersPage() {
       alert('Не удалось обновить данные');
     } finally {
       setIsUpdating(false);
+    }
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!userToDelete) return;
+    
+    setIsUpdating(true);
+    try {
+        const res = await fetch(`/api/admin/users?userId=${userToDelete}`, { method: 'DELETE' });
+        if (res.ok) {
+            setUsers(prev => prev.filter(u => u.id !== userToDelete));
+            setEditingId(null);
+            setUserToDelete(null);
+        } else {
+            const data = await res.json();
+            alert(data.error || "Не удалось удалить пользователя");
+        }
+    } catch (error) {
+        console.error(error);
+        alert("Ошибка при удалении");
+    } finally {
+        setIsUpdating(false);
     }
   };
 
@@ -298,14 +324,24 @@ export default function AdminUsersPage() {
                                 </div>
                             </div>
                             
-                            <div className="flex items-end justify-end">
+                            <div className="flex items-end justify-between gap-4">
+                                <Button 
+                                    onClick={() => setUserToDelete(user.id)}
+                                    disabled={isUpdating}
+                                    variant="destructive"
+                                    className="bg-red-500/10 text-red-500 hover:bg-red-500/20 border-red-500/20"
+                                >
+                                    {isUpdating ? <span className="animate-spin mr-2">⏳</span> : <Ban className="w-4 h-4 mr-2" />}
+                                    Удалить
+                                </Button>
+
                                 <Button 
                                     onClick={() => handleSave(user.id)} 
                                     disabled={isUpdating} 
-                                    className="w-full sm:w-auto bg-[#e81c5a] hover:bg-[#c21548] text-white"
+                                    className="bg-[#e81c5a] hover:bg-[#c21548] text-white"
                                 >
                                     {isUpdating ? <span className="animate-spin mr-2">⏳</span> : <Check className="w-4 h-4 mr-2" />}
-                                    Сохранить изменения
+                                    Сохранить
                                 </Button>
                             </div>
                         </div>
@@ -317,6 +353,26 @@ export default function AdminUsersPage() {
           );
         })}
       </div>
+
+      <Dialog open={!!userToDelete} onOpenChange={(open) => !open && setUserToDelete(null)}>
+        <DialogHeader>
+          <DialogTitle>Удаление пользователя</DialogTitle>
+          <DialogDescription>
+             Вы действительно хотите удалить этого пользователя?
+             <br />
+             Это действие удалит весь прогресс, заявки и связанные данные. Отменить это действие невозможно.
+          </DialogDescription>
+        </DialogHeader>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => setUserToDelete(null)} className="h-9 border-[#1f1f1f] bg-transparent text-gray-400 hover:bg-[#1f1f1f] hover:text-white">
+            Отмена
+          </Button>
+          <Button variant="destructive" onClick={handleDeleteConfirm} disabled={isUpdating} className="h-9 bg-red-600 hover:bg-red-700 text-white">
+            {isUpdating ? <span className="animate-spin mr-2">⏳</span> : null}
+            Удалить навсегда
+          </Button>
+        </DialogFooter>
+      </Dialog>
     </div>
   );
 }

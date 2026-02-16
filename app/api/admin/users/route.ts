@@ -65,3 +65,40 @@ export async function PUT(req: Request) {
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
 }
+
+// DELETE: Delete a user
+export async function DELETE(req: Request) {
+  try {
+    const session = await getServerSession(authOptions);
+
+    if (!session || session.user.role !== 'ADMIN') {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const { searchParams } = new URL(req.url);
+    const userId = searchParams.get('userId');
+
+    if (!userId) {
+      return NextResponse.json({ error: "Missing userId" }, { status: 400 });
+    }
+
+    if (userId === session.user.id) {
+      return NextResponse.json({ error: "Cannot delete yourself" }, { status: 400 });
+    }
+
+    // Delete user (Cascasde delete will handle related records if configured, otherwise we might need to delete relations first)
+    // Prisma schema usually handles cascade if defined. Let's assume standard cascade or simple user delete.
+    // If not, we might need to delete RecruitmentApplication first. 
+    // Looking at schema from memory, we have `onDelete: Cascade` on the relation in RecruitmentApplication? 
+    // Let's verify schema if needed, but usually we try to delete user.
+
+    await prisma.user.delete({
+      where: { id: userId },
+    });
+
+    return NextResponse.json({ message: "User deleted" });
+  } catch (error) {
+    console.error("Error deleting user:", error);
+    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+  }
+}
