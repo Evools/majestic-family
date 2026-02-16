@@ -1,7 +1,7 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { AdminStats } from "@/types/admin";
-import { ClipboardList, FileText, LayoutDashboard, LucideIcon, Settings, Users, Wallet } from "lucide-react";
+import { ClipboardList, FileText, LayoutDashboard, LucideIcon, Settings, UserPlus, Users, Wallet } from "lucide-react";
 import Link from "next/link";
 
 interface AdminLink {
@@ -68,6 +68,14 @@ export function NavigationGrid({ stats }: NavigationGridProps) {
             bgColor: "bg-[#e81c5a]/10",
         },
         {
+            title: "Заявки",
+            description: "Проверка заявок на вступление.",
+            href: "/admin/applications",
+            icon: UserPlus,
+            color: "text-orange-500",
+            bgColor: "bg-orange-500/10",
+        },
+        {
             title: "Настройки",
             description: "Системные настройки.",
             href: "/admin/settings",
@@ -78,32 +86,34 @@ export function NavigationGrid({ stats }: NavigationGridProps) {
     ];
 
     return (
-        <div className="lg:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4">
-            {adminLinks.map((link) => (
-                <Link key={link.href} href={link.href} className="group">
-                    <Card className="h-full bg-[#0a0a0a] border border-[#1f1f1f] hover:border-white/20 transition-all cursor-pointer relative overflow-hidden">
-                        <div className={`absolute inset-0 opacity-0 group-hover:opacity-5 transition-opacity ${link.bgColor.replace('/10', '')}`} />
-                        <CardContent className="p-6 relative z-10">
-                            <div className="flex items-start justify-between mb-4">
-                                <div className={`w-12 h-12 rounded-xl ${link.bgColor} flex items-center justify-center group-hover:scale-110 transition-transform`}>
-                                    <link.icon className={`h-6 w-6 ${link.color}`} />
+        <div className="lg:col-span-2 space-y-6">
+            <h2 className="text-lg font-bold text-white flex items-center gap-2">
+                <LayoutDashboard className="w-5 h-5 text-gray-500" />
+                Быстрый доступ
+            </h2>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                {adminLinks.map((link) => (
+                    <Link key={link.href} href={link.href} className="group block h-full">
+                        <Card className="h-full bg-[#0a0a0a] border-[#1f1f1f] hover:border-white/10 hover:bg-[#121212] transition-all cursor-pointer">
+                            <CardContent className="p-4 flex flex-col items-center text-center gap-3">
+                                <div className={`w-10 h-10 rounded-lg ${link.bgColor} flex items-center justify-center group-hover:scale-105 transition-transform`}>
+                                    <link.icon className={`h-5 w-5 ${link.color}`} />
                                 </div>
-                                {link.stat && (
-                                    <span className={cn("text-xs font-bold uppercase tracking-wider", link.statColor)}>
-                                        {link.stat}
-                                    </span>
-                                )}
-                            </div>
-                            <h3 className="text-lg font-bold text-white mb-2 group-hover:text-white transition-colors">
-                                {link.title}
-                            </h3>
-                            <p className="text-sm text-gray-500 group-hover:text-gray-400 transition-colors">
-                                {link.description}
-                            </p>
-                        </CardContent>
-                    </Card>
-                </Link>
-            ))}
+                                <div>
+                                    <h3 className="text-sm font-bold text-white group-hover:text-white transition-colors">
+                                        {link.title}
+                                    </h3>
+                                    {link.stat && (
+                                        <span className={cn("text-[10px] font-bold uppercase tracking-wider block mt-1", link.statColor)}>
+                                            {link.stat}
+                                        </span>
+                                    )}
+                                </div>
+                            </CardContent>
+                        </Card>
+                    </Link>
+                ))}
+            </div>
         </div>
     );
 }

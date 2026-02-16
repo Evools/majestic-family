@@ -197,3 +197,22 @@ enum PayoutStatus {
   PAID
   REJECTED
 }
+
+model RecruitmentApplication {
+  id          String            @id @default(cuid())
+  discordId   String
+  discordName String
+  age         Int
+  staticId    String // Static ID on the server
+  experience  String // RP experience
+  reason      String // Why they want to join
+  status      ApplicationStatus @default(PENDING)
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+}
+
+enum ApplicationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
