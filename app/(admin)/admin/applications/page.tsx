@@ -189,27 +189,30 @@ export default function AdminApplicationsPage() {
                   </div>
                 </div>
 
-                {app.status === "PENDING" && (
                   <div className="flex flex-col sm:flex-row gap-3 justify-end pt-4 border-t border-[#1f1f1f]">
-                    <Button
-                      onClick={() => updateStatus(app.id, "REJECTED")}
-                      disabled={!!processing}
-                      variant="ghost"
-                      className="text-red-500 hover:text-red-400 hover:bg-red-500/10"
-                    >
-                      {processing === app.id ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <X className="h-4 w-4 mr-2" />}
-                      Отклонить
-                    </Button>
-                    <Button
-                      onClick={() => updateStatus(app.id, "APPROVED")}
-                      disabled={!!processing}
-                      className="bg-green-600 hover:bg-green-700 text-white border-none shadow-[0_0_20px_-5px_rgba(22,163,74,0.4)]"
-                    >
-                      {processing === app.id ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Check className="h-4 w-4 mr-2" />}
-                      Одобрить заявку
-                    </Button>
+                    {app.status !== 'REJECTED' && (
+                      <Button
+                        onClick={() => updateStatus(app.id, "REJECTED")}
+                        disabled={!!processing}
+                        variant="ghost"
+                        className="text-red-500 hover:text-red-400 hover:bg-red-500/10"
+                      >
+                        {processing === app.id ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <X className="h-4 w-4 mr-2" />}
+                        Отклонить
+                      </Button>
+                    )}
+                    
+                    {app.status !== 'APPROVED' && (
+                      <Button
+                        onClick={() => updateStatus(app.id, "APPROVED")}
+                        disabled={!!processing}
+                        className="bg-green-600 hover:bg-green-700 text-white border-none shadow-[0_0_20px_-5px_rgba(22,163,74,0.4)]"
+                      >
+                        {processing === app.id ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Check className="h-4 w-4 mr-2" />}
+                        Одобрить
+                      </Button>
+                    )}
                   </div>
-                )}
               </CardContent>
             </Card>
           ))

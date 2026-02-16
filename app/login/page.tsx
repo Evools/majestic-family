@@ -126,12 +126,12 @@ export default function LoginPage() {
             Войти через Discord
           </Button>
 
-          <div className="text-center text-sm text-gray-400 mt-4">
+          {/* <div className="text-center text-sm text-gray-400 mt-4">
             Хотите вступить в семью?{' '}
-            <Link href="/apply" className="text-[#e81c5a] hover:underline transition-all font-medium">
+            <Link href="/payouts" className="text-[#e81c5a] hover:underline transition-all font-medium">
               Подать заявку
             </Link>
-          </div>
+          </div> */}
         </CardContent>
       </Card>
     </div>

@@ -8,7 +8,7 @@ export async function POST(req: Request) {
 
     if (!email || !password) {
       return NextResponse.json(
-        { message: 'Missing required fields' },
+        { message: 'Заполните все обязательные поля' },
         { status: 400 }
       );
     }
@@ -22,7 +22,7 @@ export async function POST(req: Request) {
 
     if (existingUser) {
       return NextResponse.json(
-        { message: 'User with this email already exists' },
+        { message: 'Пользователь с таким email уже существует' },
         { status: 409 }
       );
     }

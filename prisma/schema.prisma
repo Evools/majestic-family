@@ -33,28 +33,30 @@ model Session {
 }
 
 model User {
-  id                   String              @id @default(cuid())
+  id                   String                  @id @default(cuid())
   name                 String?
-  email                String?             @unique
+  email                String?                 @unique
   emailVerified        DateTime?
   image                String?
-  role                 Role                @default(MEMBER)
+  role                 Role                    @default(MEMBER)
   firstName            String?
+  status               UserStatus              @default(PENDING)
   lastActiveAt         DateTime?
   lastName             String?
-  staticId             String?             @unique
-  createdAt            DateTime            @default(now())
-  rank                 Int                 @default(1)
-  roleName             String              @default("Novice")
-  updatedAt            DateTime            @default(now()) @updatedAt
+  staticId             String?                 @unique
+  createdAt            DateTime                @default(now())
+  rank                 Int                     @default(1)
+  roleName             String                  @default("Novice")
+  updatedAt            DateTime                @default(now()) @updatedAt
   accounts             Account[]
   payoutRequests       PayoutRequest[]
   reports              Report[]
-  verifiedReports      Report[]            @relation("Verifier")
+  verifiedReports      Report[]                @relation("Verifier")
   reportParticipations ReportParticipant[]
   sessions             Session[]
   userContracts        UserContract[]
   password             String?
+  application          RecruitmentApplication?
 }
 
 model Report {
@@ -209,10 +211,19 @@ model RecruitmentApplication {
   status      ApplicationStatus @default(PENDING)
   createdAt   DateTime          @default(now())
   updatedAt   DateTime          @updatedAt
+  userId      String?           @unique
+  user        User?             @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 enum ApplicationStatus {
   PENDING
   APPROVED
   REJECTED
+}
+
+enum UserStatus {
+  PENDING
+  ACTIVE
+  REJECTED
+  BANNED
 }

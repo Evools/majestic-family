@@ -1,8 +1,10 @@
+import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { prisma } from "@/lib/prisma";
+import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
-const applicationSchema = z.object({
+const ApplicationSchema = z.object({
   discordId: z.string().min(1, "Необходимо указать Discord ID"),
   discordName: z.string().min(1, "Необходимо указать имя в Discord"),
   /* Validating age manually to provide Russian error message for invalid type (null) */
@@ -21,23 +23,45 @@ const applicationSchema = z.object({
 
 export async function POST(req: Request) {
   try {
+    const session = await getServerSession(authOptions);
+
+    if (!session || !session.user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const body = await req.json();
-    const validatedData = applicationSchema.parse(body);
+    const result = ApplicationSchema.safeParse(body);
+
+    if (!result.success) {
+      return NextResponse.json({ errors: result.error.issues }, { status: 400 });
+    }
+
+    const { discordName, discordId, age, staticId, experience, reason } = result.data;
+
+    // Check if user already has an application
+    const existingApplication = await prisma.recruitmentApplication.findUnique({
+      where: { userId: session.user.id }
+    });
+
+    if (existingApplication) {
+      return NextResponse.json({ error: "You have already submitted an application." }, { status: 400 });
+    }
 
     const application = await prisma.recruitmentApplication.create({
       data: {
-        ...validatedData,
+        userId: session.user.id,
+        discordName,
+        discordId,
+        age,
+        staticId,
+        experience,
+        reason,
         status: "PENDING",
       },
     });
 
     return NextResponse.json(application, { status: 201 });
   } catch (error) {
-    if (error instanceof z.ZodError) {
-      // Return the raw list of issues (ZodIssue[]) which contains path and message
-      return NextResponse.json({ errors: error.issues }, { status: 400 });
-    }
-
     console.error("Failed to submit application:", error);
     return NextResponse.json(
       {

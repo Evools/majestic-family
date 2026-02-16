@@ -14,11 +14,13 @@ export default function RegisterPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
   const router = useRouter();
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
+    setError('');
     
     try {
       const response = await fetch('/api/auth/register', {
@@ -42,8 +44,9 @@ export default function RegisterPage() {
       // Redirect to login page on success
       router.push('/login?registered=true');
     } catch (error: any) {
-      console.error('Registration error:', error);
-      alert(error.message || 'Registration failed');
+      // Use console.log instead of console.error to avoid triggering the Next.js error overlay
+      console.log('Registration error handled:', error.message);
+      setError(error.message || 'Registration failed');
     } finally {
       setIsLoading(false);
     }
@@ -68,6 +71,11 @@ export default function RegisterPage() {
         
         <CardContent className="pt-6 space-y-4">
           <form onSubmit={handleRegister} className="space-y-4">
+            {error && (
+              <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-red-500 text-sm text-center">
+                {error}
+              </div>
+            )}
             <div className="space-y-2">
               <Label htmlFor="name">Имя</Label>
               <Input

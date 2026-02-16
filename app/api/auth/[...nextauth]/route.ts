@@ -49,6 +49,7 @@ export const authOptions: AuthOptions = {
           email: user.email,
           image: user.image,
           role: user.role,
+          status: user.status,
         };
       }
     })
@@ -65,13 +66,15 @@ export const authOptions: AuthOptions = {
       if (user) {
         token.role = user.role;
         token.id = user.id;
+        token.status = user.status;
       }
       return token;
     },
     async session({ session, token }) {
       if (session?.user) {
         session.user.id = token.id as string;
-        session.user.role = token.role as any; // Add role to session
+        session.user.role = token.role as any;
+        session.user.status = token.status as any;
       }
       return session;
     },

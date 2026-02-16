@@ -43,6 +43,22 @@ export async function PATCH(req: Request) {
       data: { status },
     });
 
+    // Sync user status with application status
+    if (application.userId) {
+      let userStatus: 'ACTIVE' | 'REJECTED' | 'PENDING' | undefined;
+
+      if (status === 'APPROVED') userStatus = 'ACTIVE';
+      else if (status === 'REJECTED') userStatus = 'REJECTED';
+      else if (status === 'PENDING') userStatus = 'PENDING';
+
+      if (userStatus) {
+        await prisma.user.update({
+          where: { id: application.userId },
+          data: { status: userStatus }
+        });
+      }
+    }
+
     return NextResponse.json(application);
   } catch (error) {
     console.error("Failed to update application:", error);

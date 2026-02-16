@@ -2,8 +2,9 @@
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Role } from '@prisma/client';
-import { Award, Check, Edit2, Shield, ShieldCheck, User as UserIcon, X } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { Role, UserStatus } from '@prisma/client';
+import { Award, Ban, Check, Clock, Edit2, Shield, ShieldCheck, UserCheck, User as UserIcon, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
@@ -14,13 +15,14 @@ type UserWithRole = {
   image: string | null;
   role: Role;
   rank: number;
+  status: UserStatus;
 };
 
 export default function AdminUsersPage() {
   const [users, setUsers] = useState<UserWithRole[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [editForm, setEditForm] = useState<{ role: Role, rank: number } | null>(null);
+  const [editForm, setEditForm] = useState<{ role: Role, rank: number, status: UserStatus } | null>(null);
   const [isUpdating, setIsUpdating] = useState(false);
   const router = useRouter();
 
@@ -32,7 +34,14 @@ export default function AdminUsersPage() {
     try {
       const res = await fetch('/api/admin/users');
       if (res.ok) {
-        setUsers(await res.json());
+        const data = await res.json();
+        const sorted = data.sort((a: UserWithRole, b: UserWithRole) => {
+             // Pending first
+             if (a.status === 'PENDING' && b.status !== 'PENDING') return -1;
+             if (a.status !== 'PENDING' && b.status === 'PENDING') return 1;
+             return 0;
+        });
+        setUsers(sorted);
       } else {
         if (res.status === 401) router.push('/');
       }
@@ -49,7 +58,7 @@ export default function AdminUsersPage() {
       setEditForm(null);
     } else {
       setEditingId(user.id);
-      setEditForm({ role: user.role, rank: user.rank || 1 });
+      setEditForm({ role: user.role, rank: user.rank || 1, status: user.status });
     }
   };
 
@@ -62,7 +71,7 @@ export default function AdminUsersPage() {
     // Optimistic update
     setUsers(prev => prev.map(u => 
       u.id === userId 
-        ? { ...u, role: editForm.role, rank: editForm.rank } 
+        ? { ...u, role: editForm.role, rank: editForm.rank, status: editForm.status } 
         : u
     ));
     
@@ -70,7 +79,7 @@ export default function AdminUsersPage() {
       const res = await fetch('/api/admin/users', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: userId, role: editForm.role, rank: editForm.rank }),
+        body: JSON.stringify({ userId: userId, role: editForm.role, rank: editForm.rank, status: editForm.status }),
       });
 
       if (!res.ok) {
@@ -103,6 +112,15 @@ export default function AdminUsersPage() {
     }
   };
 
+  const getStatusBadge = (status: UserStatus) => {
+    switch(status) {
+        case 'PENDING': return <span className="bg-yellow-500/10 text-yellow-500 border border-yellow-500/20 px-2 py-0.5 rounded text-[10px] uppercase font-bold tracking-wider">На проверке</span>;
+        case 'BANNED': return <span className="bg-red-500/10 text-red-500 border border-red-500/20 px-2 py-0.5 rounded text-[10px] uppercase font-bold tracking-wider">Заблокирован</span>;
+        case 'ACTIVE': return <span className="bg-green-500/10 text-green-500 border border-green-500/20 px-2 py-0.5 rounded text-[10px] uppercase font-bold tracking-wider">Активен</span>;
+        default: return null;
+    }
+  };
+
   if (loading) return <div className="text-white">Loading...</div>;
 
   return (
@@ -117,7 +135,11 @@ export default function AdminUsersPage() {
           const isEditing = editingId === user.id;
 
           return (
-            <Card key={user.id} className={`bg-[#0a0a0a] border transition-colors duration-300 ${isEditing ? 'border-[#e81c5a]/50' : 'border-[#1f1f1f]'}`}>
+            <Card key={user.id} className={cn(
+                "bg-[#0a0a0a] border transition-colors duration-300",
+                isEditing ? 'border-[#e81c5a]/50' : 'border-[#1f1f1f]',
+                user.status === 'PENDING' ? 'border-l-4 border-l-yellow-500' : ''
+            )}>
               <CardContent className="p-4">
                 <div className="flex items-center justify-between gap-4">
                   <div className="flex items-center gap-4">
@@ -133,6 +155,7 @@ export default function AdminUsersPage() {
                         <div className="flex items-center gap-2">
                             <p className="font-bold text-white">{user.name}</p>
                             {getRoleIcon(user.role)}
+                            {getStatusBadge(user.status)}
                         </div>
                         <div className="flex items-center gap-2 text-xs text-gray-500">
                             <span>{user.email}</span>
@@ -171,6 +194,30 @@ export default function AdminUsersPage() {
                 {isEditing && editForm && (
                   <div className="mt-6 pt-6 border-t border-[#1f1f1f] animate-in slide-in-from-top-2 duration-200">
                     <div className="space-y-6">
+                        {/* Status Selection */}
+                        <div className="space-y-3">
+                             <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Статус аккаунта</label>
+                             <div className="border border-[#1f1f1f] bg-[#0f0f0f] rounded-xl p-1 flex gap-1">
+                                {[
+                                    { id: 'PENDING', label: 'На проверке', icon: Clock, color: 'text-yellow-500' },
+                                    { id: 'ACTIVE', label: 'Активен', icon: UserCheck, color: 'text-green-500' },
+                                    { id: 'BANNED', label: 'Бан', icon: Ban, color: 'text-red-500' }
+                                ].map(status => (
+                                    <button
+                                        key={status.id}
+                                        onClick={() => setEditForm(prev => prev ? ({ ...prev, status: status.id as UserStatus }) : null)}
+                                        className={cn(
+                                            "flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-bold transition-all",
+                                            editForm.status === status.id ? "bg-[#1f1f1f] text-white shadow-sm" : "hover:bg-[#1f1f1f]/50 text-gray-500"
+                                        )}
+                                    >
+                                        <status.icon className={cn("w-3 h-3", editForm.status === status.id ? status.color : "opacity-50")} />
+                                        {status.label}
+                                    </button>
+                                ))}
+                             </div>
+                        </div>
+
                         <div className="space-y-3">
                             <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Выберите роль</label>
                             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">

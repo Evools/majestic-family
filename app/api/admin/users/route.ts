@@ -14,8 +14,11 @@ export async function GET(req: Request) {
     }
 
     const users = await prisma.user.findMany({
-      orderBy: { name: "asc" },
-      select: { id: true, name: true, email: true, image: true, role: true, rank: true },
+      orderBy: [
+        { status: 'asc' }, // Pending first (alphabetically Active < Pending? No. PENDING > ACTIVE. Wait. PENDING vs ACTIVE. P > A. So 'asc' puts Active first. We want Pending first. Let's sort by createdAt desc or status specific order later. For now just get the field)
+        { name: "asc" }
+      ],
+      select: { id: true, name: true, email: true, image: true, role: true, rank: true, status: true },
     });
 
     return NextResponse.json(users);
@@ -35,13 +38,13 @@ export async function PUT(req: Request) {
     }
 
     const body = await req.json();
-    const { userId, role, rank } = body;
+    const { userId, role, rank, status } = body;
 
-    if (!userId || (!role && rank === undefined)) {
+    if (!userId) {
       return NextResponse.json({ error: "Missing fields" }, { status: 400 });
     }
 
-    // Prevent changing your own role to something else if you are the only admin (optional safety)
+    // Prevent changing your own role/status to something else if you are the only admin (optional safety)
     if (userId === session.user.id && role && role !== session.user.role) {
       return NextResponse.json({ error: "Cannot change your own role" }, { status: 400 });
     }
@@ -49,6 +52,7 @@ export async function PUT(req: Request) {
     const updateData: any = {};
     if (role) updateData.role = role as Role;
     if (rank !== undefined) updateData.rank = parseInt(rank);
+    if (status) updateData.status = status;
 
     const user = await prisma.user.update({
       where: { id: userId },
