@@ -286,13 +286,25 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "You already have this contract active" }, { status: 400 });
     }
 
-    // Check category restriction: only ONE active contract per category
+    // Check category restriction: Global lock per category (except "General")
     if (contract.category && contract.category !== "General") {
-      const sameCategoryActive = activeCountList.some(uc => uc.contract.category === contract.category);
-      if (sameCategoryActive) {
+      const anyActiveInCategory = await prisma.userContract.findFirst({
+        where: {
+          status: 'ACTIVE',
+          contract: {
+            category: contract.category,
+            id: { not: contractId } // Different contract in same category
+          }
+        },
+        include: {
+          contract: true
+        }
+      });
+
+      if (anyActiveInCategory) {
         return NextResponse.json({
-          error: "Category limit reached",
-          message: `У вас уже есть активный контракт в категории "${contract.category}". Завершите его, прежде чем брать новый этого же типа.`
+          error: "Category already active",
+          message: `В вашей семье уже активирован другой контракт в категории "${contract.category}" (${anyActiveInCategory.contract.title}). Вы можете присоединиться к нему, но не можете начать новый, пока текущий не будет выполнен.`
         }, { status: 400 });
       }
     }

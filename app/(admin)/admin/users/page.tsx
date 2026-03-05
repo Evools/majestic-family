@@ -6,8 +6,9 @@ import { Dialog, DialogDescription, DialogFooter, DialogHeader, DialogTitle } fr
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import { Role, UserStatus } from '@prisma/client';
-import { Award, Ban, Check, Clock, Edit2, Shield, ShieldCheck, UserCheck, User as UserIcon, X } from 'lucide-react';
+import { Award, Ban, Check, Clock, Edit2, Shield, ShieldCheck, UserCheck, User as UserIcon, Wallet, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+
 import { useEffect, useState } from 'react';
 
 type UserWithRole = {
@@ -18,7 +19,9 @@ type UserWithRole = {
   role: Role;
   rank: number;
   status: UserStatus;
+  balance: number;
 };
+
 
 
 export default function AdminUsersPage() {
@@ -193,6 +196,16 @@ export default function AdminUsersPage() {
                             )}
                         </div>
                     </div>
+                  </div>
+
+                  <div className="hidden lg:flex flex-col items-center gap-1 border-x border-white/5 px-8">
+                     <p className="text-[9px] font-black text-gray-600 uppercase tracking-widest leading-none">Баланс</p>
+                     <div className="flex items-center gap-2">
+                        <Wallet className="w-3.5 h-3.5 text-green-500" />
+                        <span className="text-sm font-black text-white tabular-nums tracking-tight">
+                           ${user.balance.toLocaleString()}
+                        </span>
+                     </div>
                   </div>
 
                   <div className="flex items-center gap-4">

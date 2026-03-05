@@ -14,15 +14,45 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const users = await prisma.user.findMany({
+    const usersData = await prisma.user.findMany({
       orderBy: [
-        { status: 'asc' }, // Pending first (alphabetically Active < Pending? No. PENDING > ACTIVE. Wait. PENDING vs ACTIVE. P > A. So 'asc' puts Active first. We want Pending first. Let's sort by createdAt desc or status specific order later. For now just get the field)
+        { status: 'asc' },
         { name: "asc" }
       ],
-      select: { id: true, name: true, email: true, image: true, role: true, rank: true, status: true },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        image: true,
+        role: true,
+        rank: true,
+        status: true,
+        reports: {
+          where: { status: 'APPROVED' },
+          select: { userShare: true }
+        },
+        payoutRequests: {
+          where: { status: { not: 'REJECTED' } },
+          select: { amount: true }
+        }
+      },
+    });
+
+    const users = usersData.map(user => {
+      const totalEarned = user.reports.reduce((sum, r) => sum + (r.userShare || 0), 0);
+      const totalWithdrawnOrPending = user.payoutRequests.reduce((sum, req) => sum + req.amount, 0);
+      const balance = totalEarned - totalWithdrawnOrPending;
+
+      return {
+        ...user,
+        balance,
+        reports: undefined, // Remove from response to keep it clean
+        payoutRequests: undefined
+      };
     });
 
     return NextResponse.json(users);
+
   } catch (error) {
     console.error("Error fetching users:", error);
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });

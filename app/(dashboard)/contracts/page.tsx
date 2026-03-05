@@ -37,6 +37,7 @@ export default function ContractsPage() {
   const [cancellingContract, setCancellingContract] = useState<string | null>(null);
   const [confirmCancelId, setConfirmCancelId] = useState<string | null>(null);
   const [cancelError, setCancelError] = useState<string | null>(null);
+
   const [errorModal, setErrorModal] = useState<{ title: string; message: string } | null>(null);
 
   useEffect(() => {
@@ -115,6 +116,8 @@ export default function ContractsPage() {
       setCancellingContract(null);
     }
   };
+
+
 
   const isContractActive = (contractId: string) => {
     return activeContracts.some(uc => uc.contractId === contractId);
@@ -262,11 +265,13 @@ export default function ContractsPage() {
                         variant="ghost"
                         className="h-11 text-xs font-bold uppercase tracking-widest text-red-500/60 hover:text-red-500 hover:bg-red-500/5 border border-transparent hover:border-red-500/10"
                         onClick={() => setConfirmCancelId(uc.id)}
-                        disabled={isCancelling}
+                        disabled={cancellingContract === uc.id}
                       >
-                        {isCancelling ? '...' : 'Отмена'}
+                        {cancellingContract === uc.id ? '...' : 'Отмена'}
                       </Button>
                     </div>
+
+
                   </CardContent>
                 </Card>
               );

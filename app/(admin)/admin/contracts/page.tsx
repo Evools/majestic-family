@@ -1,5 +1,6 @@
 'use client';
 
+import { ConfirmationModal } from '@/components/confirmation-modal';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -8,11 +9,18 @@ import { Contract } from '@prisma/client';
 import { Edit2, Plus, Trash2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
+
 export default function AdminContractsPage() {
   const [contracts, setContracts] = useState<Contract[]>([]);
   const [loading, setLoading] = useState(true);
   const [isCreating, setIsCreating] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  
+  // Modal State
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [contractToDelete, setContractToDelete] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
 
   // Form State
   const [formData, setFormData] = useState({
@@ -66,17 +74,27 @@ export default function AdminContractsPage() {
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this contract?')) return;
+  const handleDelete = (id: string) => {
+    setContractToDelete(id);
+    setDeleteModalOpen(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!contractToDelete) return;
+    setIsDeleting(true);
     try {
-      const res = await fetch(`/api/admin/contracts?id=${id}`, { method: 'DELETE' });
+      const res = await fetch(`/api/admin/contracts?id=${contractToDelete}`, { method: 'DELETE' });
       if (res.ok) {
-        setContracts(prev => prev.filter(c => c.id !== id));
+        setContracts(prev => prev.filter(c => c.id !== contractToDelete));
+        setDeleteModalOpen(false);
+        setContractToDelete(null);
       }
-    } catch (error) {
-      console.error(error);
+    } finally {
+      setIsDeleting(false);
     }
   };
+
+
 
   const startEdit = (contract: Contract) => {
     setFormData({
@@ -238,6 +256,21 @@ export default function AdminContractsPage() {
              </Card>
           ))}
       </div>
+
+      <ConfirmationModal
+        isOpen={deleteModalOpen}
+        onClose={() => {
+            setDeleteModalOpen(false);
+            setContractToDelete(null);
+        }}
+        onConfirm={confirmDelete}
+        title="Удалить контракт?"
+        description="Вы уверены, что хотите навсегда удалить этот контракт? Это действие нельзя будет отменить."
+        confirmText="Удалить"
+        variant="danger"
+        loading={isDeleting}
+      />
     </div>
   );
 }
+
