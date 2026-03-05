@@ -50,6 +50,9 @@ export const authOptions: AuthOptions = {
           image: user.image,
           role: user.role,
           status: user.status,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          staticId: user.staticId,
         };
       }
     })
