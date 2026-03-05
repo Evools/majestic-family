@@ -180,13 +180,19 @@ export async function PUT(req: Request) {
           });
         }
 
-        // Update all participant shares
+        // Update all participant shares and user balances
         await Promise.all(
           participants.map((participant) =>
-            tx.reportParticipant.update({
-              where: { id: participant.id },
-              data: { share: individualShare },
-            })
+            Promise.all([
+              tx.reportParticipant.update({
+                where: { id: participant.id },
+                data: { share: individualShare },
+              }),
+              tx.user.update({
+                where: { id: participant.userId },
+                data: { balance: { increment: individualShare } },
+              })
+            ])
           )
         );
 

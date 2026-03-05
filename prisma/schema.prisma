@@ -44,6 +44,7 @@ model User {
   lastActiveAt         DateTime?
   lastName             String?
   staticId             String?                 @unique
+  balance              Float                   @default(0)
   createdAt            DateTime                @default(now())
   rank                 Int                     @default(1)
   roleName             String                  @default("Novice")

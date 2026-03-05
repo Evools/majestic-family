@@ -74,6 +74,16 @@ export async function PUT(req: Request) {
       }
     });
 
+    // If approving payout, deduct from user balance
+    if (action === 'approve') {
+      await prisma.user.update({
+        where: { id: payout.userId },
+        data: {
+          balance: { decrement: payout.amount }
+        }
+      });
+    }
+
     return NextResponse.json({ success: true, payout: updatedPayout });
 
   } catch (error) {
