@@ -304,7 +304,7 @@ export async function POST(req: Request) {
 
       if (anyActiveInCategory) {
         return NextResponse.json({
-          error: "Category already active",
+          error: "Контракт уже активирован",
           message: `В вашей семье уже активирован другой контракт в категории "${contract.category}" (${anyActiveInCategory.contract.title}). Вы можете присоединиться к нему, но не можете начать новый, пока текущий не будет выполнен.`
         }, { status: 400 });
       }

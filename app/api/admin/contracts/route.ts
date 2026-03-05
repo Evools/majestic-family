@@ -26,7 +26,8 @@ export async function POST(req: Request) {
     }
 
     const body = await req.json();
-    const { title, description, icon, level, reward, reputation, maxSlots, isFlexible, category } = body;
+    const { title, description, icon, level, reward, reputation, maxSlots, isFlexible, category, targetGoal } = body;
+
 
     if (!title || !level) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
@@ -44,7 +45,9 @@ export async function POST(req: Request) {
         isFlexible: !!isFlexible,
         category: category || "General",
         maxSlots: maxSlots ? parseInt(maxSlots) : 1,
+        targetGoal: targetGoal ? parseInt(targetGoal) : 100,
       },
+
     });
 
     return NextResponse.json(contract);
@@ -64,7 +67,8 @@ export async function PUT(req: Request) {
     }
 
     const body = await req.json();
-    const { id, title, description, icon, level, reward, reputation, isActive, maxSlots, isFlexible, category } = body;
+    const { id, title, description, icon, level, reward, reputation, isActive, maxSlots, isFlexible, category, targetGoal } = body;
+
 
     if (!id) {
       return NextResponse.json({ error: "Missing ID" }, { status: 400 });
@@ -83,8 +87,10 @@ export async function PUT(req: Request) {
         isFlexible,
         category,
         maxSlots: maxSlots ? parseInt(maxSlots) : undefined,
+        targetGoal: targetGoal ? parseInt(targetGoal) : undefined,
       },
     });
+
 
     return NextResponse.json(contract);
   } catch (error) {

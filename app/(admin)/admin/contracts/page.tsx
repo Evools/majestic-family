@@ -109,7 +109,8 @@ export default function AdminContractsPage() {
       maxSlots: contract.maxSlots.toString(),
       isFlexible: contract.isFlexible,
       category: contract.category,
-      targetGoal: (contract as any).targetGoal.toString(),
+      targetGoal: ((contract as any).targetGoal ?? 100).toString(),
+
     });
 
     setEditingId(contract.id);
