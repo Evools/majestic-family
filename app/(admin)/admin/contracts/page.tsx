@@ -33,7 +33,9 @@ export default function AdminContractsPage() {
     maxSlots: '10',
     isFlexible: false,
     category: 'General',
+    targetGoal: '100'
   });
+
 
   useEffect(() => {
     fetchContracts();
@@ -107,13 +109,15 @@ export default function AdminContractsPage() {
       maxSlots: contract.maxSlots.toString(),
       isFlexible: contract.isFlexible,
       category: contract.category,
+      targetGoal: (contract as any).targetGoal.toString(),
     });
+
     setEditingId(contract.id);
     setIsCreating(true);
   };
 
   const resetForm = () => {
-    setFormData({ title: '', description: '', reward: '0', reputation: '0', level: '1', icon: 'ClipboardList', maxSlots: '10', isFlexible: false, category: 'General' });
+    setFormData({ title: '', description: '', reward: '0', reputation: '0', level: '1', icon: 'ClipboardList', maxSlots: '10', isFlexible: false, category: 'General', targetGoal: '100' });
     setEditingId(null);
     setIsCreating(false);
   };
@@ -198,6 +202,17 @@ export default function AdminContractsPage() {
                             />
                         </div>
                         <div className="space-y-2">
+                            <label className="text-xs font-medium text-gray-400 uppercase tracking-wide">Цель (количество)</label>
+                             <Input 
+                                 type="number"
+                                 placeholder="100" 
+                                 value={formData.targetGoal}
+                                 onChange={e => setFormData({...formData, targetGoal: e.target.value})}
+                                 className="bg-[#0f0f0f] border-[#1f1f1f] text-white"
+                             />
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-xs font-medium text-gray-400 uppercase tracking-wide">Места (если не гибкий)</label>
                             <Input 
                                 type="number"
                                 placeholder="10" 

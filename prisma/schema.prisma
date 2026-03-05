@@ -135,6 +135,7 @@ model Contract {
   currentCycle  Int            @default(1)
   isFlexible    Boolean        @default(false)
   category      String         @default("General")
+  targetGoal    Int            @default(100)
   userContracts UserContract[]
 }
 

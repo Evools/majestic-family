@@ -3,10 +3,12 @@
 import { ContractCard } from '@/components/contract-card';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { cn } from '@/lib/utils';
 import { Contract } from '@prisma/client';
 import { AlertCircle, ArrowUpRight, Briefcase, CheckCircle2, Clock, History, Users } from 'lucide-react';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
+
 
 type UserContractWithContract = {
   id: string;
@@ -22,7 +24,8 @@ type GlobalContract = Contract & {
   cycleCount: number; 
   totalQuantity: number;
   alreadyParticipated: boolean;
-  activeParticipants: { user: { id: string; name: string; firstName: string; lastName: string; image: string | null } }[];
+  activeParticipants: any[];
+  targetGoal: number;
 };
 
 export default function ContractsPage() {
@@ -359,18 +362,32 @@ export default function ContractsPage() {
                         </div>
                        )}
                        
-                       {!contract.isFlexible ? (
-                         <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
-                            <div 
-                              className={`h-full transition-all duration-1000 ${isFull ? 'bg-[#e81c5a]' : 'bg-gray-600'}`}
-                              style={{ width: `${Math.min(progress, 100)}%` }}
-                            />
-                         </div>
-                       ) : (
-                         <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
-                            <div className="h-full bg-[#e81c5a]/20 w-full animate-pulse" />
-                         </div>
-                       )}
+                       {/* Progress based on Target Goal */}
+                       <div className="space-y-2">
+                           <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-widest leading-none">
+                               <span className="text-gray-500">Прогресс семьи</span>
+                               <span className={cn(
+                                   "font-black tabular-nums",
+                                   (contract.totalQuantity / (contract.targetGoal || 1) * 100) >= 100 ? "text-green-500" : "text-[#e81c5a]"
+                               )}>
+                                   {Math.round((contract.totalQuantity / (contract.targetGoal || 1)) * 100)}%
+                               </span>
+                           </div>
+                           <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
+                               <div 
+                                   className={cn(
+                                       "h-full transition-all duration-1000",
+                                       (contract.totalQuantity / (contract.targetGoal || 1) * 100) >= 100 ? "bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.4)]" : "bg-[#e81c5a]"
+                                   )}
+                                   style={{ width: `${Math.min((contract.totalQuantity / (contract.targetGoal || 1)) * 100, 100)}%` }}
+                               />
+                           </div>
+                           <div className="flex justify-between items-center text-[9px] font-bold text-gray-500 uppercase tracking-tighter">
+                               <span>0</span>
+                               <span>Цель: {contract.targetGoal}</span>
+                           </div>
+                       </div>
+
 
                        {/* Active Participants Avatars/Names */}
                        {contract.activeParticipants && contract.activeParticipants.length > 0 && (

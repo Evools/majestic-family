@@ -156,8 +156,22 @@ export async function PUT(req: Request) {
         if (userContract) {
           const contract = userContract.contract;
 
+          // Aggregate total quantity of items submitted in this cycle
+          const reportsAgg = await tx.report.aggregate({
+            where: {
+              userContract: {
+                contractId: contract.id,
+                cycleNumber: contract.currentCycle
+              },
+              status: 'APPROVED'
+            },
+            _sum: {
+              quantity: true
+            }
+          });
+          const totalQuantity = reportsAgg._sum.quantity || 0;
+
           // Count relevant participations in the current cycle
-          // We consider ACTIVE and COMPLETED as "slots taken"
           const activeCount = await tx.userContract.count({
             where: {
               contractId: contract.id,
@@ -165,19 +179,6 @@ export async function PUT(req: Request) {
               cycleNumber: contract.currentCycle
             }
           });
-
-          const completedCount = await tx.userContract.count({
-            where: {
-              contractId: contract.id,
-              status: 'COMPLETED',
-              cycleNumber: contract.currentCycle
-            }
-          });
-
-          // If there are no active people left, AND (either we reached maxSlots OR it's a non-flexible contract that is effectively "full")
-          // Actually, if activeCount is 0, we check if any more people CAN take it.
-          // If it's not flexible and we reached max slots (some might be COMPLETED, some might be CANCELLED), 
-          // the cycle should end when NO ONE is ACTIVE.
 
           const totalParticipatedInCycle = await tx.userContract.count({
             where: {
@@ -187,7 +188,11 @@ export async function PUT(req: Request) {
             }
           });
 
-          if (activeCount === 0 && (!contract.isFlexible && totalParticipatedInCycle >= contract.maxSlots)) {
+          // NEW: End cycle if Goal is reached OR (no active people left AND max slots reached)
+          const isGoalReached = (contract as any).targetGoal > 0 && totalQuantity >= (contract as any).targetGoal;
+          const isFullAndQuiet = activeCount === 0 && (!contract.isFlexible && totalParticipatedInCycle >= contract.maxSlots);
+
+          if (isGoalReached || isFullAndQuiet) {
             const settings = await tx.systemSettings.findFirst();
             const cooldownHours = settings?.contractCooldownHours ?? 24;
 
@@ -200,6 +205,7 @@ export async function PUT(req: Request) {
             });
           }
         }
+
 
         return updatedReport;
       });

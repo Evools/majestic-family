@@ -117,8 +117,9 @@ export async function GET() {
         }
       });
 
-      return { ...c, cycleCount, totalQuantity, alreadyParticipated, activeParticipants };
+      return { ...c, cycleCount, totalQuantity, alreadyParticipated, activeParticipants, targetGoal: (c as any).targetGoal };
     }));
+
 
     // Get user's contracts with report status
     const userContracts = await prisma.userContract.findMany({
