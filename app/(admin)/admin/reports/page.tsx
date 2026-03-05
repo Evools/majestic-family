@@ -246,11 +246,32 @@ export default function AdminReportsPage() {
                             <span className="text-xs font-black text-green-500/80">${userShare.toLocaleString()}</span>
                         </div>
                         <div className="w-px h-6 bg-white/5" />
-                        <div className="flex flex-col gap-0.5 min-w-[60px]">
-                            <span className="text-[9px] font-bold text-gray-500 uppercase tracking-widest leading-none flex items-center gap-1">
-                                <Users className="w-2.5 h-2.5" /> {participantCount + 1} чел.
+                        <div className="flex flex-col gap-1.5 min-w-[120px]">
+                            <span className="text-[9px] font-bold text-gray-500 uppercase tracking-widest flex items-center gap-1">
+                                <Users className="w-2.5 h-2.5" /> {participantCount} чел.
                             </span>
                             <span className="text-xs font-black text-blue-500/80">${individualShare.toLocaleString()} <span className="text-[9px] text-gray-600 font-bold uppercase">/ чел</span></span>
+                            
+                            {/* Participant List (Avatars/Names) */}
+                            {participantCount > 0 && (
+                                <div className="flex flex-wrap gap-1 mt-1">
+                                    {report.participants.map((p) => (
+                                        <div 
+                                            key={p.user.id} 
+                                            className="group/p relative"
+                                            title={getUserDisplayName(p.user)}
+                                        >
+                                            {p.user.image ? (
+                                                <img src={p.user.image} alt="" className="w-5 h-5 rounded-full object-cover border border-white/10" />
+                                            ) : (
+                                                <div className="w-5 h-5 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-[8px] font-bold text-gray-500 uppercase">
+                                                    {p.user.firstName?.[0] || p.user.name?.[0] || '?'}
+                                                </div>
+                                            )}
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
                         </div>
                     </div>
                   </div>

@@ -18,7 +18,10 @@ type UserContractWithContract = {
   completedAt: string | null;
   contract: Contract & { maxSlots: number; cycleCount: number };
   reports: { status: string; id: string }[];
+  totalQuantity: number;
+  targetGoal: number;
 };
+
 
 type GlobalContract = Contract & { 
   cycleCount: number; 
@@ -224,49 +227,69 @@ export default function ContractsPage() {
               const hasReport = uc.reports.length > 0;
               
               return (
-                <Card key={uc.id} className="group relative overflow-hidden bg-[#0a0a0a] border-white/5 hover:border-green-500/20 transition-all duration-500 shadow-2xl">
-                  {/* Glowing background effect */}
-                  <div className="absolute -top-24 -right-24 w-48 h-48 bg-green-500/5 blur-[80px] group-hover:bg-green-500/10 transition-colors duration-500" />
-                  
-                  {/* Status Bar */}
-                  <div className={`absolute top-0 left-0 w-full h-1 ${hasReport ? 'bg-blue-500' : 'bg-green-500'}`} />
-                  
-                  <CardContent className="p-6 flex flex-col h-full">
-                    <div className="flex items-center justify-between mb-6">
-                      <div className="flex items-center gap-2">
-                        <div className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border text-[10px] font-bold uppercase tracking-widest ${
+                <Card key={uc.id} className="group relative h-full bg-[#0a0a0a] border border-[#1f1f1f] hover:border-green-500/30 transition-all duration-300 flex flex-col overflow-hidden rounded-xl">
+                  <CardContent className="p-5 flex flex-col h-full z-10 relative">
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="flex gap-2">
+                        <span className={`px-2 py-0.5 rounded border text-[9px] font-bold uppercase tracking-widest ${
                           hasReport 
                             ? 'bg-blue-500/10 border-blue-500/20 text-blue-500' 
                             : 'bg-green-500/10 border-green-500/20 text-green-500'
                         }`}>
-                          <div className={`w-1.5 h-1.5 rounded-full ${hasReport ? 'bg-blue-500' : 'bg-green-500 animate-pulse'}`} />
                           {hasReport ? 'Отчет на проверке' : 'Миссия Активна'}
-                        </div>
+                        </span>
                       </div>
-                      
-                      <div className="flex items-center gap-1.5 text-gray-500 bg-white/5 px-2 py-1 rounded text-[10px] font-bold uppercase tracking-widest">
+                      <div className="flex items-center gap-1.5 text-gray-500 text-[10px] font-bold uppercase tracking-widest leading-none">
                         <Clock className="w-3.5 h-3.5" />
-                        {new Date(uc.startedAt).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}
+                        <span>{new Date(uc.startedAt).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}</span>
                       </div>
+                    </div>
+
+                    <div className="mb-6 space-y-3">
+                       {/* Progress based on Target Goal */}
+                       <div className="space-y-2">
+                           <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-widest leading-none">
+                               <span className="text-gray-500">Прогресс семьи</span>
+                               <span className={cn(
+                                   "font-black tabular-nums",
+                                   (uc.totalQuantity / (uc.targetGoal || 1) * 100) >= 100 ? "text-green-500" : "text-[#e81c5a]"
+                               )}>
+                                   {Math.round((uc.totalQuantity / (uc.targetGoal || 1)) * 100)}%
+                               </span>
+                           </div>
+                           <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
+                               <div 
+                                   className={cn(
+                                       "h-full transition-all duration-1000",
+                                       (uc.totalQuantity / (uc.targetGoal || 1) * 100) >= 100 ? "bg-green-500" : "bg-[#e81c5a]"
+                                   )}
+                                   style={{ width: `${Math.min((uc.totalQuantity / (uc.targetGoal || 1)) * 100, 100)}%` }}
+                               />
+                           </div>
+                           <div className="flex justify-between items-center text-[9px] font-bold text-gray-500 uppercase tracking-tighter">
+                               <span>Сдано {uc.totalQuantity} шт.</span>
+                               <span>Цель: {uc.targetGoal}</span>
+                           </div>
+                       </div>
                     </div>
 
                     <div className="grow">
                         <ContractCard contract={uc.contract} />
                     </div>
                     
-                    <div className="grid grid-cols-2 gap-3 pt-6 mt-2 border-t border-white/5">
+                    <div className="grid grid-cols-2 gap-3 pt-6 mt-4 border-t border-white/5">
                       <Link href="/report" className="contents">
                         <Button 
-                          className="bg-white/5 hover:bg-white/10 border border-white/5 text-xs font-bold uppercase tracking-widest h-11 group/btn transition-all duration-300"
+                          className="bg-white/5 hover:bg-white/10 border border-white/5 text-[10px] font-bold uppercase tracking-widest h-10 group/btn transition-all duration-300"
                         >
                           <span className="flex-1 text-center">Сдать отчет</span>
-                          <ArrowUpRight className="w-4 h-4 ml-2 text-gray-500 group-hover/btn:text-white group-hover/btn:translate-x-0.5 group-hover/btn:-translate-y-0.5 transition-all" />
+                          <ArrowUpRight className="w-3.5 h-3.5 ml-1.5 text-gray-500 group-hover/btn:text-white group-hover/btn:translate-x-0.5 group-hover/btn:-translate-y-0.5 transition-all text-xs" />
                         </Button>
                       </Link>
                       
                       <Button
                         variant="ghost"
-                        className="h-11 text-xs font-bold uppercase tracking-widest text-red-500/60 hover:text-red-500 hover:bg-red-500/5 border border-transparent hover:border-red-500/10"
+                        className="h-10 text-[10px] font-bold uppercase tracking-widest text-red-500/60 hover:text-red-500 hover:bg-red-500/5 border border-transparent hover:border-red-500/10"
                         onClick={() => setConfirmCancelId(uc.id)}
                         disabled={cancellingContract === uc.id}
                       >
@@ -274,9 +297,10 @@ export default function ContractsPage() {
                       </Button>
                     </div>
 
-
                   </CardContent>
                 </Card>
+
+
               );
             })}
           </div>
@@ -377,7 +401,7 @@ export default function ContractsPage() {
                                <div 
                                    className={cn(
                                        "h-full transition-all duration-1000",
-                                       (contract.totalQuantity / (contract.targetGoal || 1) * 100) >= 100 ? "bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.4)]" : "bg-[#e81c5a]"
+                                       (contract.totalQuantity / (contract.targetGoal || 1) * 100) >= 100 ? "bg-green-500" : "bg-[#e81c5a]"
                                    )}
                                    style={{ width: `${Math.min((contract.totalQuantity / (contract.targetGoal || 1)) * 100, 100)}%` }}
                                />
@@ -405,7 +429,7 @@ export default function ContractsPage() {
                                    className="w-4 h-4 rounded-full object-cover border border-white/10"
                                  />
                                ) : (
-                                 <div className="w-2 h-2 rounded-full bg-green-500 shadow-[0_0_5px_rgba(34,197,94,0.5)] ml-1" />
+                                 <div className="w-2 h-2 rounded-full bg-green-500 ml-1" />
                                )}
                                <span className="max-w-[70px] truncate">
                                  {p.user.firstName || p.user.name}
@@ -425,7 +449,7 @@ export default function ContractsPage() {
                         className={`w-full h-11 text-[10px] font-bold uppercase tracking-widest transition-all duration-300 ${
                           isActive || cooldown || isFull || alreadyParticipated
                             ? 'bg-white/5 text-gray-500 border border-white/5 cursor-not-allowed'
-                            : 'bg-[#e81c5a] hover:bg-[#c21548] text-white shadow-lg shadow-[#e81c5a]/20 hover:shadow-[#e81c5a]/40'
+                            : 'bg-[#e81c5a] hover:bg-[#c21548] text-white'
                         }`}
                         onClick={() => handleTakeContract(contract.id)}
                         disabled={isActive || !!cooldown || isTaking || activeContracts.length >= maxActiveContracts || isFull || alreadyParticipated}
@@ -484,50 +508,62 @@ export default function ContractsPage() {
             </span>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {completedContracts.map((uc) => (
-              <div 
-                key={uc.id} 
-                className="group relative bg-[#0a0a0a] border border-[#d1ff00]/5 hover:border-[#d1ff00]/20 rounded-2xl p-5 transition-all duration-300 overflow-hidden"
-              >
-                {/* Subtle finish gradient background */}
-                <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(209,255,0,0.02),transparent)] pointer-events-none" />
-                
-                <div className="relative z-10 space-y-4">
-                    <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2 px-2 py-1 rounded-md bg-[#d1ff00]/10 border border-[#d1ff00]/10">
-                            <CheckCircle2 className="w-3 h-3 text-[#d1ff00]" />
-                            <span className="text-[10px] font-black text-[#d1ff00] uppercase tracking-wider">Выполнено</span>
-                        </div>
-                        <span className="text-[10px] font-bold text-gray-600 uppercase tracking-widest">
-                            {new Date(uc.startedAt).toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: '2-digit' })}
-                        </span>
+              <Card key={uc.id} className="group relative h-full bg-[#0a0a0a] border border-[#1f1f1f] hover:border-blue-500/30 transition-all duration-300 flex flex-col overflow-hidden rounded-xl">
+                <CardContent className="p-5 flex flex-col h-full z-10 relative">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex gap-2">
+                      <span className="px-2 py-0.5 rounded border border-blue-500/20 bg-blue-500/10 text-blue-500 text-[9px] font-bold uppercase tracking-widest">
+                        Выполнено
+                      </span>
                     </div>
+                    <div className="flex items-center gap-1.5 text-gray-500 text-[10px] font-bold uppercase tracking-widest leading-none">
+                      <Clock className="w-3.5 h-3.5" />
+                      <span>{new Date(uc.startedAt).toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: '2-digit' })}</span>
+                    </div>
+                  </div>
 
-                    <div>
-                        <h3 className="text-base font-black text-white group-hover:text-[#d1ff00] transition-colors duration-300 tracking-tight leading-tight mb-1">
-                            {uc.contract.title}
-                        </h3>
-                        <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest opacity-60">
-                            {uc.contract.category || 'General'} &bull; Уровень {uc.contract.level}
-                        </p>
-                    </div>
+                  <div className="mb-6 space-y-3">
+                     {/* Progress based on Target Goal */}
+                     <div className="space-y-2">
+                         <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-widest leading-none">
+                             <span className="text-gray-500">Прогресс семьи</span>
+                             <span className="font-black tabular-nums text-green-500">
+                                 {Math.round((uc.totalQuantity / (uc.targetGoal || 1)) * 100)}%
+                             </span>
+                         </div>
+                         <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
+                             <div 
+                                 className="h-full transition-all duration-1000 bg-green-500"
+                                 style={{ width: `${Math.min((uc.totalQuantity / (uc.targetGoal || 1)) * 100, 100)}%` }}
+                             />
+                         </div>
+                         <div className="flex justify-between items-center text-[9px] font-bold text-gray-500 uppercase tracking-tighter">
+                             <span>Итого {uc.totalQuantity} шт.</span>
+                             <span>Цель: {uc.targetGoal}</span>
+                         </div>
+                     </div>
+                  </div>
 
-                    <div className="pt-4 border-t border-white/5 flex items-center justify-between">
-                        <div>
-                            <p className="text-[9px] font-black text-gray-600 uppercase tracking-widest mb-1">Полученная награда</p>
-                            <p className="text-lg font-black text-[#d1ff00] tracking-tighter">
-                                ${uc.contract.reward.toLocaleString('ru-RU')}
-                            </p>
-                        </div>
-                        <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center border border-white/5 group-hover:scale-110 transition-transform">
-                            <History className="w-4 h-4 text-gray-500" />
-                        </div>
+                  <div className="grow">
+                      <ContractCard contract={uc.contract} />
+                  </div>
+                  
+                  <div className="pt-6 mt-4 border-t border-white/5 flex items-center justify-between">
+                    <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center border border-white/5">
+                        <History className="w-3.5 h-3.5 text-gray-500" />
                     </div>
-                </div>
-              </div>
+                    <span className="text-[9px] font-bold text-gray-500 uppercase tracking-widest bg-white/5 px-2 py-1 rounded">
+                        Архив
+                    </span>
+                  </div>
+
+                </CardContent>
+              </Card>
             ))}
           </div>
+
         </div>
       )}
 

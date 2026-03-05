@@ -133,10 +133,35 @@ export async function GET() {
       orderBy: { startedAt: 'desc' },
     });
 
-    // Separate active and completed
-    // INCLUDE contracts that have a PENDING report in the active list so users can see them
-    const active = userContracts.filter(uc => uc.status === 'ACTIVE');
-    const completed = userContracts.filter(uc => uc.status === 'COMPLETED');
+    // Separate active and completed and enrich with global cycle stats
+    const active = await Promise.all(userContracts.filter(uc => uc.status === 'ACTIVE').map(async (uc) => {
+      const reportsAgg = await prisma.report.aggregate({
+        where: {
+          userContract: {
+            contractId: uc.contractId,
+            cycleNumber: uc.cycleNumber
+          },
+          status: 'APPROVED'
+        },
+        _sum: { quantity: true }
+      });
+      return { ...uc, totalQuantity: reportsAgg._sum.quantity || 0, targetGoal: (uc.contract as any).targetGoal };
+    }));
+
+    const completed = await Promise.all(userContracts.filter(uc => uc.status === 'COMPLETED').map(async (uc) => {
+      const reportsAgg = await prisma.report.aggregate({
+        where: {
+          userContract: {
+            contractId: uc.contractId,
+            cycleNumber: uc.cycleNumber
+          },
+          status: 'APPROVED'
+        },
+        _sum: { quantity: true }
+      });
+      return { ...uc, totalQuantity: reportsAgg._sum.quantity || 0, targetGoal: (uc.contract as any).targetGoal };
+    }));
+
 
     const cooldownHours = settings?.contractCooldownHours ?? 24;
     const maxActiveContracts = settings?.maxActiveContracts ?? 10;
