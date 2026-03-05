@@ -52,16 +52,77 @@ export async function PUT(req: Request) {
     }
 
     const body = await req.json();
-    const { reportId, action, value, rejectionReason } = body; // action: 'approve' | 'reject'
+    const { reportId, action, rejectionReason } = body; // action: 'approve' | 'reject'
 
     if (!reportId || !action) {
       return NextResponse.json({ error: "Missing fields" }, { status: 400 });
     }
 
     if (action === "approve") {
-      const totalValue = parseFloat(value);
-      if (isNaN(totalValue) || totalValue < 0) {
-        return NextResponse.json({ error: "Invalid value" }, { status: 400 });
+      // Get report with contract info
+      const reportWithContract = await prisma.report.findUnique({
+        where: { id: reportId },
+        include: {
+          userContract: {
+            include: { contract: true }
+          },
+          participants: true
+        }
+      });
+
+      if (!reportWithContract) {
+        return NextResponse.json({ error: "Report not found" }, { status: 404 });
+      }
+
+      const contract = reportWithContract.userContract?.contract;
+      if (!contract) {
+        return NextResponse.json({ error: "Contract not found" }, { status: 400 });
+      }
+
+      const participants = reportWithContract.participants;
+      if (participants.length === 0) {
+        return NextResponse.json({ error: "No participants found. Add at least one participant before approving." }, { status: 400 });
+      }
+
+      // Check if any participant already has an approved report in this cycle
+      const userContractCycle = reportWithContract.userContract;
+      if (contract && userContractCycle) {
+        const participantIds = participants.map(p => p.userId);
+        
+        const existingApprovedReports = await prisma.report.findMany({
+          where: {
+            id: { not: reportId }, // Exclude current report
+            userContract: {
+              contractId: contract.id,
+              cycleNumber: userContractCycle.cycleNumber,
+            },
+            status: 'APPROVED',
+            participants: {
+              some: {
+                userId: { in: participantIds }
+              }
+            }
+          },
+          include: {
+            participants: {
+              where: { userId: { in: participantIds } },
+              select: { userId: true }
+            }
+          }
+        });
+
+        if (existingApprovedReports.length > 0) {
+          const conflictingUsers = new Set<string>();
+          existingApprovedReports.forEach(r => {
+            r.participants.forEach(p => {
+              conflictingUsers.add(p.userId);
+            });
+          });
+          
+          return NextResponse.json({ 
+            error: `Участник(и) уже сдали отчет в этом цикле и не могут быть одобрены повторно: ${Array.from(conflictingUsers).join(', ')}`
+          }, { status: 400 });
+        }
       }
 
       // Get system settings for share percentages
@@ -69,33 +130,49 @@ export async function PUT(req: Request) {
       const userSharePercent = settings?.userSharePercent || 60;
       const familySharePercent = settings?.familySharePercent || 40;
 
-      const totalUserShare = totalValue * (userSharePercent / 100);
-      const familyShare = totalValue * (familySharePercent / 100);
-
-      // Get all participants for this report
-      const participants = await prisma.reportParticipant.findMany({
-        where: { reportId },
-      });
-
-      if (participants.length === 0) {
-        return NextResponse.json({ error: "No participants found. Add at least one participant before approving." }, { status: 400 });
-      }
-
-      // Calculate individual share (split equally among participants)
-      const individualShare = totalUserShare / participants.length;
+      // Calculate slot value (each participant occupies one slot)
+      const slotValue = contract.reward / contract.maxSlots;
+      
+      // Each participant gets a fixed share per slot
+      const userSlotShare = slotValue * (userSharePercent / 100);
+      const familySlotShare = slotValue * (familySharePercent / 100);
+      
+      // Individual participant share (same for all in this report)
+      const individualShare = userSlotShare;
+      
+      // Family share (multiplied by number of participants in this report)
+      const familyShare = familySlotShare * participants.length;
+      const totalUserShare = userSlotShare * participants.length;
 
       // Update report and create participant shares in a transaction
       const report = await prisma.$transaction(async (tx) => {
-        // Get the report to find userContractId
+        // Get the report to find userContractId and all participants
         const existingReport = await tx.report.findUnique({
           where: { id: reportId },
-          select: { userContractId: true }
+          include: { participants: { select: { userId: true } } }
         });
 
-        // If there's a userContract, mark it as COMPLETED
+        // Mark report creator's userContract as COMPLETED
         if (existingReport?.userContractId) {
           await tx.userContract.update({
             where: { id: existingReport.userContractId },
+            data: {
+              status: 'COMPLETED',
+              completedAt: new Date(),
+            },
+          });
+        }
+
+        // Mark all participant userContracts as COMPLETED
+        const participantUserIds = participants.map(p => p.userId);
+        if (userContractCycle) {
+          await tx.userContract.updateMany({
+            where: {
+              contractId: contract.id,
+              cycleNumber: userContractCycle.cycleNumber,
+              userId: { in: participantUserIds },
+              status: 'ACTIVE' // Only update active ones
+            },
             data: {
               status: 'COMPLETED',
               completedAt: new Date(),
@@ -112,6 +189,31 @@ export async function PUT(req: Request) {
             })
           )
         );
+
+        // Ensure all participants have a UserContract for this contract
+        const existingUserContracts = await tx.userContract.findMany({
+          where: {
+            contractId: contract.id,
+            userId: { in: participantUserIds },
+            cycleNumber: userContractCycle?.cycleNumber
+          }
+        });
+
+        const existingUserIds = new Set(existingUserContracts.map(uc => uc.userId));
+        const missingUserIds = participantUserIds.filter(uid => !existingUserIds.has(uid));
+
+        // Create UserContract for any participants who don't have one
+        if (missingUserIds.length > 0) {
+          await tx.userContract.createMany({
+            data: missingUserIds.map(userId => ({
+              userId,
+              contractId: contract.id,
+              status: 'COMPLETED' as const,
+              cycleNumber: userContractCycle?.cycleNumber || contract.currentCycle,
+              completedAt: new Date(),
+            }))
+          });
+        }
 
         // Update dashboard settings (Family Balance and Goal progress)
         let dashboardSettings = await tx.dashboardSettings.findFirst();
@@ -137,7 +239,7 @@ export async function PUT(req: Request) {
           where: { id: reportId },
           data: {
             status: 'APPROVED',
-            value: totalValue,
+            value: totalUserShare + familyShare,
             userShare: totalUserShare,
             familyShare,
             verifierId: session.user.id,
@@ -151,48 +253,32 @@ export async function PUT(req: Request) {
           }
         });
 
-        // Global Cooldown Logic: Check if all slots are filled and no one is active anymore
+        // Global Cooldown Logic: Check if all slots are filled
         const userContract = updatedReport.userContract;
         if (userContract) {
           const contract = userContract.contract;
 
-          // Aggregate total quantity of items submitted in this cycle
-          const reportsAgg = await tx.report.aggregate({
+          // Count unique participants who have submitted approved reports in this cycle
+          const participantsWithApprovedReports = await tx.reportParticipant.findMany({
+            distinct: ['userId'],
             where: {
-              userContract: {
-                contractId: contract.id,
-                cycleNumber: contract.currentCycle
-              },
-              status: 'APPROVED'
+              report: {
+                userContract: {
+                  contractId: contract.id,
+                  cycleNumber: contract.currentCycle
+                },
+                status: 'APPROVED'
+              }
             },
-            _sum: {
-              quantity: true
-            }
-          });
-          const totalQuantity = reportsAgg._sum.quantity || 0;
-
-          // Count relevant participations in the current cycle
-          const activeCount = await tx.userContract.count({
-            where: {
-              contractId: contract.id,
-              status: 'ACTIVE',
-              cycleNumber: contract.currentCycle
-            }
+            select: { userId: true }
           });
 
-          const totalParticipatedInCycle = await tx.userContract.count({
-            where: {
-              contractId: contract.id,
-              status: { in: ['ACTIVE', 'COMPLETED'] },
-              cycleNumber: contract.currentCycle
-            }
-          });
+          const filledSlots = participantsWithApprovedReports.length;
 
-          // NEW: End cycle if Goal is reached OR (no active people left AND max slots reached)
-          const isGoalReached = (contract as any).targetGoal > 0 && totalQuantity >= (contract as any).targetGoal;
-          const isFullAndQuiet = activeCount === 0 && (!contract.isFlexible && totalParticipatedInCycle >= contract.maxSlots);
+          // End cycle if all max slots are filled
+          const cycleComplete = filledSlots >= contract.maxSlots;
 
-          if (isGoalReached || isFullAndQuiet) {
+          if (cycleComplete) {
             const settings = await tx.systemSettings.findFirst();
             const cooldownHours = settings?.contractCooldownHours ?? 24;
 

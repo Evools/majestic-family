@@ -20,6 +20,11 @@ export function ParticipantSelector({
 }: ParticipantSelectorProps) {
     return (
         <div className="space-y-4 pt-6 border-t border-white/10">
+            <div className="p-3 bg-amber-500/5 border border-amber-500/10 rounded-lg">
+                <p className="text-[10px] font-bold text-amber-200 uppercase tracking-widest">⚠ Важно</p>
+                <p className="text-[11px] text-amber-200/70 mt-1">Каждый участник может сдать только один отчет за цикл контракта. Все в данном отчете получат одинаковую награду за свой слот.</p>
+            </div>
+            
             <div className="flex items-center justify-between">
                 <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest flex items-center gap-2">
                     <Star className="w-3 h-3 text-yellow-500" />

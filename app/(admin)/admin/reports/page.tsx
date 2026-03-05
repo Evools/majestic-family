@@ -34,6 +34,7 @@ type ReportWithRelations = Report & {
       id: string;
       title: string;
       reward: number;
+      maxSlots: number;
       reputation: number;
       category: string | null;
     };
@@ -90,15 +91,15 @@ export default function AdminReportsPage() {
     const report = reports.find(r => r.id === activeAction.id);
     if (!report) return;
 
-    // For approval, use contract reward
-    const contractReward = report.userContract?.contract?.reward || 0;
+    // For approval, no value needed anymore
+    // const contractReward = report.userContract?.contract?.reward || 0;
     
     setProcessingId(activeAction.id);
     try {
       const body = {
         reportId: activeAction.id,
         action: activeAction.type,
-        ...(activeAction.type === 'approve' ? { value: contractReward.toString() } : { rejectionReason })
+        ...(activeAction.type === 'reject' && { rejectionReason })
       };
 
       const res = await fetch('/api/admin/reports', {
@@ -188,8 +189,7 @@ export default function AdminReportsPage() {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     reportId: id,
-                    action: 'approve',
-                    value: (report.userContract?.contract?.reward || 0).toString()
+                    action: 'approve'
                 }),
             });
             if (res.ok) successCount++;
@@ -319,9 +319,19 @@ export default function AdminReportsPage() {
           {filteredReports.map((report) => {
             const participantCount = report.participants.length;
             const contractReward = report.userContract?.contract?.reward || 0;
-            const familyShare = contractReward * 0.4;
-            const userShare = contractReward * 0.6;
-            const individualShare = participantCount > 0 ? userShare / participantCount : 0;
+            const maxSlots = report.userContract?.contract?.maxSlots || 1;
+            
+            // Calculate per-slot value (each slot gets fixed amount)
+            const slotValue = contractReward / maxSlots;
+            const userSlotShare = slotValue * 0.6;
+            const familySlotShare = slotValue * 0.4;
+            
+            // Total shares for all participants in this report
+            const userShare = userSlotShare * participantCount;
+            const familyShare = familySlotShare * participantCount;
+            
+            // Individual share (always same per participant)
+            const individualShare = userSlotShare;
             const isProcessing = processingId === report.id;
             const isActive = activeAction?.id === report.id;
 

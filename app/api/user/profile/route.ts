@@ -35,9 +35,9 @@ export async function GET(req: Request) {
     }
 
     // Calculate stats
-    const totalEarned = await prisma.report.aggregate({
-      where: { userId: user.id, status: 'APPROVED' },
-      _sum: { userShare: true }
+    const totalEarned = await prisma.reportParticipant.aggregate({
+      where: { userId: user.id, report: { status: 'APPROVED' } },
+      _sum: { share: true }
     });
 
     const approvedReportsCount = await prisma.report.count({
@@ -58,7 +58,7 @@ export async function GET(req: Request) {
         createdAt: user.createdAt,
       },
       stats: {
-        totalEarned: totalEarned._sum.userShare || 0,
+        totalEarned: totalEarned._sum.share || 0,
         totalReports: user._count.reports,
         approvedReports: approvedReportsCount,
         activeContracts: user.userContracts.length

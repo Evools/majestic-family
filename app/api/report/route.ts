@@ -44,6 +44,49 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Contract not found or not active" }, { status: 404 });
     }
 
+    // Check if user or any participants already have approved reports in this cycle
+    const allParticipantIds = [user.id, ...(participantIds || [])];
+    const existingApprovedReports = await prisma.report.findMany({
+      where: {
+        userContract: {
+          contractId: userContract.contractId,
+          cycleNumber: userContract.cycleNumber,
+        },
+        status: 'APPROVED',
+        participants: {
+          some: {
+            userId: { in: allParticipantIds }
+          }
+        }
+      },
+      include: {
+        participants: {
+          select: { userId: true }
+        }
+      }
+    });
+
+    if (existingApprovedReports.length > 0) {
+      const conflictingUsers = new Set<string>();
+      existingApprovedReports.forEach(r => {
+        r.participants.forEach(p => {
+          if (allParticipantIds.includes(p.userId)) {
+            conflictingUsers.add(p.userId);
+          }
+        });
+      });
+      
+      const conflictingUserIds = Array.from(conflictingUsers);
+      const conflictingUserNames = conflictingUserIds.length > 0 
+        ? `(${conflictingUserIds.join(', ')})` 
+        : '';
+      
+      return NextResponse.json({ 
+        error: `Участник(и) уже сдали отчет в этом цикле контракта. Один участник может сдать максимум один отчет за цикл. ${conflictingUserNames}`,
+        conflictingUserIds 
+      }, { status: 400 });
+    }
+
     // Create report and add participants in a transaction
     const report = await prisma.$transaction(async (tx) => {
       const newReport = await tx.report.create({

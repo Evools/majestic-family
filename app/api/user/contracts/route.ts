@@ -81,13 +81,27 @@ export async function GET() {
         alreadyParticipated = !!participation;
       }
 
-      const cycleCount = await prisma.userContract.count({
+      // Count unique participants who submitted approved reports in this cycle
+      const participantsWithApprovedReports = await prisma.reportParticipant.findMany({
+        distinct: ['userId'],
         where: {
-          contractId: c.id,
-          status: { in: ['ACTIVE', 'COMPLETED'] },
-          cycleNumber: c.currentCycle
+          report: {
+            userContract: {
+              contractId: c.id,
+              cycleNumber: c.currentCycle
+            },
+            status: 'APPROVED'
+          }
+        },
+        include: {
+          user: {
+            select: { id: true, name: true, firstName: true, lastName: true, image: true }
+          }
         }
       });
+
+      const cycleCount = participantsWithApprovedReports.length;
+      const activeParticipants = participantsWithApprovedReports;
 
       // Aggregate total quantity of items submitted in this cycle
       const reportsAgg = await prisma.report.aggregate({
@@ -103,19 +117,6 @@ export async function GET() {
         }
       });
       const totalQuantity = reportsAgg._sum.quantity || 0;
-
-      const activeParticipants = await prisma.userContract.findMany({
-        where: {
-          contractId: c.id,
-          status: 'ACTIVE',
-          cycleNumber: c.currentCycle
-        },
-        include: {
-          user: {
-            select: { id: true, name: true, firstName: true, lastName: true, image: true }
-          }
-        }
-      });
 
       return { ...c, cycleCount, totalQuantity, alreadyParticipated, activeParticipants, targetGoal: (c as any).targetGoal };
     }));

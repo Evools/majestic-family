@@ -126,10 +126,11 @@ export default function ReportPage() {
                 });
                 removeForm(index);
             } else {
+                const errorData = await response.json().catch(() => ({ error: 'Неизвестная ошибка' }));
                 addToast({
                     type: 'error',
                     title: 'Ошибка',
-                    message: 'Произошла ошибка при отправке отчета.',
+                    message: errorData.error || 'Произошла ошибка при отправке отчета.',
                 });
             }
         } catch (error) {
@@ -223,11 +224,26 @@ export default function ReportPage() {
                             <div className="overflow-hidden">
                                 <div className="rounded-b-xl border-t border-white/5 bg-[#050505]/50">
                                     <CardContent className="p-6">
-                                        <div className="mb-6 flex items-start p-4 bg-blue-500/5 border border-blue-500/10 rounded-xl gap-3">
-                                            <AlertCircle className="w-5 h-5 text-blue-500 shrink-0 mt-0.5" />
-                                            <div className="space-y-1">
-                                                <p className="text-xs font-bold text-blue-200">Информация о контракте</p>
-                                                <p className="text-[11px] text-blue-200/60 leading-relaxed">{uc.contract.description || "Нет описания"}</p>
+                                        <div className="mb-6 space-y-3">
+                                            <div className="flex items-start p-4 bg-blue-500/5 border border-blue-500/10 rounded-xl gap-3">
+                                                <AlertCircle className="w-5 h-5 text-blue-500 shrink-0 mt-0.5" />
+                                                <div className="space-y-1 flex-1">
+                                                    <p className="text-xs font-bold text-blue-200">Информация о контракте</p>
+                                                    <p className="text-[11px] text-blue-200/60 leading-relaxed">{uc.contract.description || "Нет описания"}</p>
+                                                </div>
+                                            </div>
+                                            
+                                            <div className="grid grid-cols-2 gap-3">
+                                                <div className="p-3 bg-green-500/5 border border-green-500/10 rounded-lg">
+                                                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">За один слот (вам)</p>
+                                                    <p className="text-sm font-black text-green-400">${((uc.contract.reward / uc.contract.maxSlots) * 0.6).toLocaleString()}</p>
+                                                    <p className="text-[9px] text-gray-500 mt-1">60% одного слота</p>
+                                                </div>
+                                                <div className="p-3 bg-purple-500/5 border border-purple-500/10 rounded-lg">
+                                                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Всего слотов</p>
+                                                    <p className="text-sm font-black text-purple-400">{uc.contract.maxSlots}</p>
+                                                    <p className="text-[9px] text-gray-500 mt-1">в контракте</p>
+                                                </div>
                                             </div>
                                         </div>
 

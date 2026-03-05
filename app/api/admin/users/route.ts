@@ -27,9 +27,9 @@ export async function GET(req: Request) {
         role: true,
         rank: true,
         status: true,
-        reports: {
-          where: { status: 'APPROVED' },
-          select: { userShare: true }
+        reportParticipations: {
+          where: { report: { status: 'APPROVED' } },
+          select: { share: true }
         },
         payoutRequests: {
           where: { status: { not: 'REJECTED' } },
@@ -39,14 +39,14 @@ export async function GET(req: Request) {
     });
 
     const users = usersData.map(user => {
-      const totalEarned = user.reports.reduce((sum, r) => sum + (r.userShare || 0), 0);
+      const totalEarned = user.reportParticipations.reduce((sum, rp) => sum + rp.share, 0);
       const totalWithdrawnOrPending = user.payoutRequests.reduce((sum, req) => sum + req.amount, 0);
       const balance = totalEarned - totalWithdrawnOrPending;
 
       return {
         ...user,
         balance,
-        reports: undefined, // Remove from response to keep it clean
+        reportParticipations: undefined,
         payoutRequests: undefined
       };
     });

@@ -31,9 +31,9 @@ export async function POST(req: Request) {
     const user = await prisma.user.findUnique({
       where: { email: session.user.email },
       include: {
-        reports: {
-          where: { status: 'APPROVED' },
-          select: { userShare: true }
+        reportParticipations: {
+          where: { report: { status: 'APPROVED' } },
+          select: { share: true }
         },
         payoutRequests: {
           where: { status: { not: 'REJECTED' } },
@@ -47,7 +47,7 @@ export async function POST(req: Request) {
     }
 
     // Calculate available balance
-    const totalEarned = user.reports.reduce((sum, Report) => sum + (Report.userShare || 0), 0);
+    const totalEarned = user.reportParticipations.reduce((sum, rp) => sum + rp.share, 0);
     const totalWithdrawnOrPending = user.payoutRequests.reduce((sum, req) => sum + req.amount, 0);
     const availableBalance = totalEarned - totalWithdrawnOrPending;
 
@@ -84,9 +84,9 @@ export async function GET(req: Request) {
     const user = await prisma.user.findUnique({
       where: { email: session.user.email },
       include: {
-        reports: {
-          where: { status: 'APPROVED' },
-          select: { userShare: true }
+        reportParticipations: {
+          where: { report: { status: 'APPROVED' } },
+          select: { share: true }
         },
         payoutRequests: {
           orderBy: { createdAt: 'desc' }
@@ -98,7 +98,7 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    const totalEarned = user.reports.reduce((sum, r) => sum + (r.userShare || 0), 0);
+    const totalEarned = user.reportParticipations.reduce((sum, rp) => sum + rp.share, 0);
     const totalWithdrawnOrPending = user.payoutRequests
       .filter(req => req.status !== 'REJECTED')
       .reduce((sum, req) => sum + req.amount, 0);
