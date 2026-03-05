@@ -67,6 +67,9 @@ export const authOptions: AuthOptions = {
         token.role = user.role;
         token.id = user.id;
         token.status = user.status;
+        token.firstName = user.firstName;
+        token.lastName = user.lastName;
+        token.staticId = user.staticId;
       }
       return token;
     },
@@ -75,6 +78,9 @@ export const authOptions: AuthOptions = {
         session.user.id = token.id as string;
         session.user.role = token.role as any;
         session.user.status = token.status as any;
+        session.user.firstName = token.firstName as string | null;
+        session.user.lastName = token.lastName as string | null;
+        session.user.staticId = token.staticId as string | null;
       }
       return session;
     },

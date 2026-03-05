@@ -193,11 +193,17 @@ export function Sidebar() {
                 <div className="w-9 h-9 rounded-full bg-linear-to-br from-[#e81c5a] to-purple-600 border border-white/10 group-hover:border-white/30 transition-colors" />
             )}
             
-            <div className="flex flex-col min-w-0">
-                <span className="text-sm font-medium text-white truncate group-hover:text-[#e81c5a] transition-colors">
-                    {session?.user?.name || 'User'}
+            <div className="flex flex-col min-w-0 pt-0.5">
+                <span className="text-sm font-bold text-white truncate group-hover:text-[#e81c5a] transition-colors">
+                    {session?.user?.firstName && session?.user?.lastName 
+                        ? `${session.user.firstName} ${session.user.lastName}` 
+                        : (session?.user?.name || 'Пользователь')}
                 </span>
-                <span className="text-xs text-gray-500 truncate">{session?.user?.role === 'ADMIN' ? 'Administrator' : 'Member'}</span>
+                <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest truncate mt-0.5">
+                    {session?.user?.staticId ? `#${session.user.staticId}` : 'Нет статика'} 
+                    <span className="mx-1.5 opacity-50">•</span> 
+                    <span className="normal-case tracking-normal font-medium">{session?.user?.name}</span>
+                </span>
             </div>
           </Link>
           
