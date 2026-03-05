@@ -1,10 +1,8 @@
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
-import { ActivityFeed } from '@/components/dashboard/activity-feed';
-import { BonusWidget } from '@/components/dashboard/bonus-widget';
-import { StatsCards } from '@/components/dashboard/stats-cards';
+import { BentoGrid } from '@/components/dashboard/bento-grid';
 import { WelcomeBanner } from '@/components/dashboard/welcome-banner';
 import { prisma } from '@/lib/prisma';
-import { BestEmployee, DashboardSettings, RecentReport } from '@/types/dashboard';
+import { BestEmployee, DashboardSettings } from '@/types/dashboard';
 import { getServerSession } from 'next-auth';
 
 export default async function Dashboard() {
@@ -40,37 +38,6 @@ export default async function Dashboard() {
       goalCurrent: settingsRaw.goalCurrent,
       goalTarget: settingsRaw.goalTarget
   };
-
-  // Fetch recent reports for activity feed
-  const recentReportsRaw = await prisma.report.findMany({
-    select: {
-      id: true,
-      itemName: true, // Changed from contractType
-      status: true,
-      createdAt: true,
-      user: {
-        select: {
-          firstName: true,
-          name: true,
-        },
-      },
-    },
-    orderBy: {
-      createdAt: 'desc',
-    },
-    take: 4,
-  });
-  
-  const recentReports: RecentReport[] = recentReportsRaw.map(r => ({
-      id: r.id,
-      itemName: r.itemName,
-      status: r.status,
-      createdAt: r.createdAt,
-      user: {
-          firstName: r.user.firstName,
-          name: r.user.name
-      }
-  }));
 
   // Calculate best employee (most approved reports value)
   const bestEmployeeRaw = await prisma.user.findFirst({
@@ -123,25 +90,36 @@ export default async function Dashboard() {
     ? Math.round(((settings.goalCurrent || 0) / settings.goalTarget) * 100)
     : 0;
 
+  // Calculate user personal stats
+  const userStatsRaw = await prisma.report.findMany({
+      where: {
+          userId: user?.id,
+          status: 'APPROVED'
+      },
+      select: {
+          userShare: true,
+      }
+  });
+
+  const userStats = {
+      earned: userStatsRaw.reduce((sum, r) => sum + (r.userShare || 0), 0),
+      reports: userStatsRaw.length
+  };
+
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       {/* Welcome Section */}
       <WelcomeBanner displayName={displayName} />
 
-      {/* Featured Widgets */}
-      <BonusWidget settings={settings} />
-
-      {/* Info Cards */}
-      <StatsCards 
+      {/* Bento Grid layout */}
+      <BentoGrid 
         settings={settings}
         bestEmployee={bestEmployee}
         bestEmployeeEarnings={bestEmployeeEarnings}
         xpPercentage={xpPercentage}
         goalPercentage={goalPercentage}
+        userStats={userStats}
       />
-      
-      {/* Activity Feed */}
-      <ActivityFeed recentReports={recentReports} />
     </div>
   );
 }
