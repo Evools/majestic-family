@@ -308,27 +308,39 @@ export default function ContractsPage() {
               const isDimmed = isActive || (cooldown && !isActive);
 
               return (
-                <Card key={contract.id} className={`group relative h-full bg-[#0a0a0a] border border-[#1f1f1f] hover:border-[#e81c5a]/20 transition-all duration-300 flex flex-col ${isDimmed ? 'opacity-80' : ''}`}>
-                  {/* Status Overlay Badges */}
-                  <div className="absolute top-4 right-4 z-10 flex flex-col gap-1 items-end pointer-events-none">
-                     {isActive && (
-                         <span className="px-2 py-1 bg-green-500/20 text-green-500 text-[10px] font-bold uppercase tracking-widest rounded border border-green-500/20 shadow-lg backdrop-blur-sm">
-                             В работе
-                         </span>
-                     )}
-                     {alreadyParticipated && !isActive && (
-                         <span className="px-2 py-1 bg-blue-500/20 text-blue-500 text-[10px] font-bold uppercase tracking-widest rounded border border-blue-500/20 shadow-lg backdrop-blur-sm">
-                             Выполнено
-                         </span>
-                     )}
-                     {isFull && !isActive && !alreadyParticipated && (
-                         <span className="px-2 py-1 bg-red-500/20 text-red-500 text-[10px] font-bold uppercase tracking-widest rounded border border-red-500/20 shadow-lg backdrop-blur-sm">
-                             Мест нет
-                         </span>
-                     )}
+                <Card key={contract.id} className={`group relative h-full bg-[#0a0a0a] border border-[#1f1f1f] hover:border-[#e81c5a]/30 transition-all duration-300 flex flex-col overflow-hidden rounded-xl ${isDimmed ? 'opacity-80' : ''}`}>
+                  {/* Static Banner with Placeholder Image */}
+                  <div className="relative h-28 w-full bg-[#0f0f0f] border-b border-[#1f1f1f] overflow-hidden">
+                    <img 
+                      src="https://plus.unsplash.com/premium_photo-1661962648855-b97a8e025e0e?q=80&w=3732&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D" 
+                      alt="Banner" 
+                      className="absolute inset-0 w-full h-full object-cover opacity-20 grayscale hover:grayscale-0 transition-all duration-700"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0a] to-transparent opacity-60" />
+                    
+                    {/* Status Overlay Badges - Native Style */}
+                    <div className="absolute top-3 right-3 z-10 flex flex-col gap-1 items-end pointer-events-none">
+                       {isActive && (
+                           <span className="px-2 py-0.5 bg-green-500/10 text-green-500 text-[9px] font-bold uppercase tracking-widest rounded border border-green-500/20 backdrop-blur-md">
+                               В работе
+                           </span>
+                       )}
+                       {alreadyParticipated && !isActive && (
+                           <span className="px-2 py-0.5 bg-blue-500/10 text-blue-500 text-[9px] font-bold uppercase tracking-widest rounded border border-blue-500/20 backdrop-blur-md">
+                               Выполнено
+                           </span>
+                       )}
+                       {isFull && !isActive && !alreadyParticipated && (
+                           <span className="px-2 py-0.5 bg-red-500/10 text-red-500 text-[9px] font-bold uppercase tracking-widest rounded border border-red-500/20 backdrop-blur-md">
+                               Мест нет
+                           </span>
+                       )}
+                    </div>
+
+
                   </div>
 
-                  <CardContent className="p-6 flex flex-col h-full z-0 relative">
+                  <CardContent className="p-5 flex flex-col h-full z-0 relative">
                     <div className="mb-6 space-y-3">
                        <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-widest leading-none">
                           <div className="flex items-center gap-1.5 text-gray-400">
@@ -361,7 +373,7 @@ export default function ContractsPage() {
                          </div>
                        ) : (
                          <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
-                            <div className="h-full bg-cyan-500/50 w-full animate-pulse" />
+                            <div className="h-full bg-[#e81c5a]/20 w-full animate-pulse" />
                          </div>
                        )}
 
@@ -398,9 +410,9 @@ export default function ContractsPage() {
 
                     <div className="mt-6 pt-6 border-t border-white/5">
                       <Button
-                        className={`w-full h-12 text-xs font-bold uppercase tracking-widest transition-all duration-300 ${
+                        className={`w-full h-11 text-[10px] font-bold uppercase tracking-widest transition-all duration-300 ${
                           isActive || cooldown || isFull || alreadyParticipated
-                            ? 'bg-white/5 text-gray-500 border border-white/5 hover:bg-white/10'
+                            ? 'bg-white/5 text-gray-500 border border-white/5 cursor-not-allowed'
                             : 'bg-[#e81c5a] hover:bg-[#c21548] text-white shadow-lg shadow-[#e81c5a]/20 hover:shadow-[#e81c5a]/40'
                         }`}
                         onClick={() => handleTakeContract(contract.id)}
@@ -408,22 +420,22 @@ export default function ContractsPage() {
                       >
                         {isTaking ? (
                           <div className="flex items-center gap-2">
-                             <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin" />
-                             Обработка...
+                             <div className="w-3.5 h-3.5 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+                             Обработка
                           </div>
                         ) : isActive ? (
-                          'Контракт активен'
+                          'В работе'
                         ) : cooldown ? (
                           <div className="flex items-center gap-2 text-orange-400">
-                            <Clock className="w-4 h-4" />
+                            <Clock className="w-3.5 h-3.5" />
                             <span>{cooldown.hours}ч {cooldown.minutes}м</span>
                           </div>
                         ) : isFull ? (
-                          'Группа набрана'
+                          'Мест нет'
                         ) : alreadyParticipated ? (
-                          'Завершено'
+                          'Выполнено'
                         ) : activeContracts.length >= maxActiveContracts ? (
-                          `Лимит активных (${maxActiveContracts})`
+                          `Лимит (${maxActiveContracts})`
                         ) : (
                           'Подписать контракт'
                         )}
