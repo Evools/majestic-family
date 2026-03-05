@@ -204,8 +204,10 @@ export default function LeaderboardPage() {
                                     <p className="text-gray-400 font-mono font-bold text-sm bg-white/5 px-3 py-1 rounded-lg">
                                         {category === 'farm' ? `$${top3[1].value?.toLocaleString()}` : `${top3[1].count} отчетов`}
                                     </p>
-                                    <div className="h-28 w-full md:w-4/5 mx-auto bg-linear-to-t from-gray-500/10 to-transparent border-t border-gray-500/20 rounded-t-2xl mt-6 relative overflow-hidden">
+                                    <div className="h-32 w-full md:w-4/5 mx-auto bg-linear-to-t from-gray-400/20 via-gray-400/5 to-transparent border-t-2 border-gray-300 rounded-t-2xl mt-6 relative overflow-hidden flex items-end justify-center pb-2 shadow-[0_-10px_30px_rgba(156,163,175,0.1)]">
                                         <div className="absolute inset-0 bg-gray-400/5 backdrop-blur-xs" />
+                                        <div className="absolute top-0 left-0 w-full h-px bg-linear-to-r from-transparent via-gray-300 to-transparent opacity-80" />
+                                        <span className="text-gray-400/20 font-black text-7xl relative z-10 leading-none">2</span>
                                     </div>
                                 </>
                             ) : (
@@ -239,9 +241,10 @@ export default function LeaderboardPage() {
                                     <p className="text-yellow-400 font-mono font-black text-lg bg-yellow-500/10 border border-yellow-500/20 px-4 py-1.5 rounded-xl">
                                         {category === 'farm' ? `$${top3[0].value?.toLocaleString()}` : `${top3[0].count} отчетов`}
                                     </p>
-                                    <div className="h-40 w-full md:w-11/12 mx-auto bg-linear-to-t from-yellow-500/10 to-transparent border-t border-yellow-500/20 rounded-t-3xl mt-6 relative overflow-hidden">
+                                    <div className="h-44 w-full md:w-11/12 mx-auto bg-linear-to-t from-yellow-500/20 via-yellow-500/5 to-transparent border-t-2 border-yellow-400 rounded-t-3xl mt-6 relative overflow-hidden flex items-end justify-center pb-4 shadow-[0_-10px_40px_rgba(250,204,21,0.15)]">
                                         <div className="absolute inset-0 bg-yellow-400/5 backdrop-blur-sm" />
-                                        <div className="absolute top-0 left-0 w-full h-1 bg-linear-to-r from-transparent via-yellow-400 to-transparent opacity-50" />
+                                        <div className="absolute top-0 left-0 w-full h-px bg-linear-to-r from-transparent via-yellow-300 to-transparent opacity-80" />
+                                        <span className="text-yellow-500/20 font-black text-8xl relative z-10 leading-none mt-4">1</span>
                                     </div>
                                 </>
                             ) : (
@@ -273,8 +276,10 @@ export default function LeaderboardPage() {
                                     <p className="text-gray-400 font-mono font-bold text-sm bg-white/5 px-3 py-1 rounded-lg">
                                         {category === 'farm' ? `$${top3[2].value?.toLocaleString()}` : `${top3[2].count} отчетов`}
                                     </p>
-                                    <div className="h-20 w-full md:w-4/5 mx-auto bg-linear-to-t from-amber-700/10 to-transparent border-t border-amber-700/20 rounded-t-2xl mt-6 relative overflow-hidden">
+                                    <div className="h-24 w-full md:w-4/5 mx-auto bg-linear-to-t from-amber-700/30 via-amber-700/5 to-transparent border-t-2 border-amber-600 rounded-t-2xl mt-6 relative overflow-hidden flex items-end justify-center pb-2 shadow-[0_-10px_30px_rgba(180,83,9,0.1)]">
                                         <div className="absolute inset-0 bg-amber-700/5 backdrop-blur-xs" />
+                                        <div className="absolute top-0 left-0 w-full h-px bg-linear-to-r from-transparent via-amber-600 to-transparent opacity-80" />
+                                        <span className="text-amber-700/30 font-black text-6xl relative z-10 leading-none">3</span>
                                     </div>
                                 </>
                             ) : (
