@@ -151,20 +151,13 @@ export async function PUT(req: Request) {
           }
         });
 
-        // Global Cooldown Logic: Check if all slots are completed
+        // Global Cooldown Logic: Check if all slots are filled and no one is active anymore
         const userContract = updatedReport.userContract;
         if (userContract) {
           const contract = userContract.contract;
 
-          // Count completed user contracts for this contract in the current cycle
-          const completedCount = await tx.userContract.count({
-            where: {
-              contractId: contract.id,
-              status: 'COMPLETED',
-              cycleNumber: contract.currentCycle
-            }
-          });
-
+          // Count relevant participations in the current cycle
+          // We consider ACTIVE and COMPLETED as "slots taken"
           const activeCount = await tx.userContract.count({
             where: {
               contractId: contract.id,
@@ -173,8 +166,28 @@ export async function PUT(req: Request) {
             }
           });
 
-          // If we've reached max slots and no one is active anymore, start the global cooldown
-          if (completedCount >= contract.maxSlots && activeCount === 0) {
+          const completedCount = await tx.userContract.count({
+            where: {
+              contractId: contract.id,
+              status: 'COMPLETED',
+              cycleNumber: contract.currentCycle
+            }
+          });
+
+          // If there are no active people left, AND (either we reached maxSlots OR it's a non-flexible contract that is effectively "full")
+          // Actually, if activeCount is 0, we check if any more people CAN take it.
+          // If it's not flexible and we reached max slots (some might be COMPLETED, some might be CANCELLED), 
+          // the cycle should end when NO ONE is ACTIVE.
+
+          const totalParticipatedInCycle = await tx.userContract.count({
+            where: {
+              contractId: contract.id,
+              status: { in: ['ACTIVE', 'COMPLETED'] },
+              cycleNumber: contract.currentCycle
+            }
+          });
+
+          if (activeCount === 0 && (!contract.isFlexible && totalParticipatedInCycle >= contract.maxSlots)) {
             const settings = await tx.systemSettings.findFirst();
             const cooldownHours = settings?.contractCooldownHours ?? 24;
 

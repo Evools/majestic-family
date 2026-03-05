@@ -21,12 +21,66 @@ export async function GET() {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    // For each contract, we want to know its current cycle status
+    // Lazy Cleanup: Mark active contracts older than 24h as CANCELLED to prevent stalling
+    const staleThreshold = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    await prisma.userContract.updateMany({
+      where: {
+        status: 'ACTIVE',
+        startedAt: { lt: staleThreshold }
+      },
+      data: {
+        status: 'CANCELLED',
+        completedAt: new Date()
+      }
+    });
+
     const allContracts = await prisma.contract.findMany({
       where: { isActive: true }
     });
 
+    const settings = await prisma.systemSettings.findFirst();
+    const globalCooldownHours = settings?.contractCooldownHours ?? 24;
+
     const contractsWithCycle = await Promise.all(allContracts.map(async (c) => {
+      let alreadyParticipated = false;
+
+      // Participation check
+      if (c.isFlexible) {
+        const activeParticipation = await prisma.userContract.findFirst({
+          where: {
+            userId: user.id,
+            contractId: c.id,
+            status: 'ACTIVE'
+          }
+        });
+
+        if (activeParticipation) {
+          alreadyParticipated = true;
+        } else {
+          const recentCompletion = await prisma.userContract.findFirst({
+            where: {
+              userId: user.id,
+              contractId: c.id,
+              status: 'COMPLETED',
+              completedAt: {
+                gt: new Date(Date.now() - globalCooldownHours * 60 * 60 * 1000)
+              }
+            }
+          });
+          alreadyParticipated = !!recentCompletion;
+        }
+      } else {
+        const participation = await prisma.userContract.findFirst({
+          where: {
+            userId: user.id,
+            contractId: c.id,
+            cycleNumber: c.currentCycle,
+            status: { in: ['ACTIVE', 'COMPLETED'] }
+          }
+        });
+        alreadyParticipated = !!participation;
+      }
+
       const cycleCount = await prisma.userContract.count({
         where: {
           contractId: c.id,
@@ -35,16 +89,20 @@ export async function GET() {
         }
       });
 
-      let alreadyParticipated = false;
-      const participation = await prisma.userContract.findFirst({
+      // Aggregate total quantity of items submitted in this cycle
+      const reportsAgg = await prisma.report.aggregate({
         where: {
-          userId: user.id,
-          contractId: c.id,
-          cycleNumber: c.currentCycle,
-          status: { in: ['ACTIVE', 'COMPLETED'] }
+          userContract: {
+            contractId: c.id,
+            cycleNumber: c.currentCycle
+          },
+          status: 'APPROVED'
+        },
+        _sum: {
+          quantity: true
         }
       });
-      alreadyParticipated = !!participation;
+      const totalQuantity = reportsAgg._sum.quantity || 0;
 
       const activeParticipants = await prisma.userContract.findMany({
         where: {
@@ -59,7 +117,7 @@ export async function GET() {
         }
       });
 
-      return { ...c, cycleCount, alreadyParticipated, activeParticipants };
+      return { ...c, cycleCount, totalQuantity, alreadyParticipated, activeParticipants };
     }));
 
     // Get user's contracts with report status
@@ -75,14 +133,10 @@ export async function GET() {
     });
 
     // Separate active and completed
-    // Filter out active contracts that already have a PENDING report
-    const active = userContracts.filter(uc =>
-      uc.status === 'ACTIVE' &&
-      !uc.reports.some(r => r.status === 'PENDING')
-    );
+    // INCLUDE contracts that have a PENDING report in the active list so users can see them
+    const active = userContracts.filter(uc => uc.status === 'ACTIVE');
     const completed = userContracts.filter(uc => uc.status === 'COMPLETED');
 
-    const settings = await prisma.systemSettings.findFirst();
     const cooldownHours = settings?.contractCooldownHours ?? 24;
     const maxActiveContracts = settings?.maxActiveContracts ?? 10;
 
@@ -165,21 +219,55 @@ export async function POST(req: Request) {
       }, { status: 400 });
     }
 
-    // Check if user already participated in THIS cycle
-    const userParticipation = await prisma.userContract.findFirst({
-      where: {
-        userId: user.id,
-        contractId,
-        cycleNumber: contract.currentCycle,
-        status: { in: ['ACTIVE', 'COMPLETED'] }
-      }
-    });
+    // Check if user already participated
+    if (contract.isFlexible) {
+      // For flexible: check if active OR recently completed within cooldown
+      const settings = await prisma.systemSettings.findFirst();
+      const cooldownHours = settings?.contractCooldownHours ?? 24;
 
-    if (userParticipation) {
-      return NextResponse.json({
-        error: "Already participated",
-        message: "Вы уже участвовали в выполнении этого контракта в текущем цикле. Дождитесь следующего обновления или выберите другое задание."
-      }, { status: 400 });
+      const existingParticipation = await prisma.userContract.findFirst({
+        where: {
+          userId: user.id,
+          contractId,
+          OR: [
+            { status: 'ACTIVE' },
+            {
+              status: 'COMPLETED',
+              completedAt: {
+                gt: new Date(Date.now() - cooldownHours * 60 * 60 * 1000)
+              }
+            }
+          ]
+        }
+      });
+
+      if (existingParticipation) {
+        const errorMsg = existingParticipation.status === 'ACTIVE'
+          ? "Вы уже взяли этот контракт."
+          : `Вы недавно выполняли этот контракт. Он будет доступен через время отката.`;
+
+        return NextResponse.json({
+          error: "Already participated",
+          message: errorMsg
+        }, { status: 400 });
+      }
+    } else {
+      // Standard: check participation in THIS cycle
+      const userParticipation = await prisma.userContract.findFirst({
+        where: {
+          userId: user.id,
+          contractId,
+          cycleNumber: contract.currentCycle,
+          status: { in: ['ACTIVE', 'COMPLETED'] }
+        }
+      });
+
+      if (userParticipation) {
+        return NextResponse.json({
+          error: "Already participated",
+          message: "Вы уже участвовали в выполнении этого контракта в текущем цикле. Дождитесь следующего обновления или выберите другое задание."
+        }, { status: 400 });
+      }
     }
 
     // Check if user already has this contract active

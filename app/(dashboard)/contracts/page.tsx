@@ -4,7 +4,7 @@ import { ContractCard } from '@/components/contract-card';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Contract } from '@prisma/client';
-import { AlertCircle, ArrowUpRight, Briefcase, Clock, History, Users } from 'lucide-react';
+import { AlertCircle, ArrowUpRight, Briefcase, CheckCircle2, Clock, History, Users } from 'lucide-react';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 
@@ -20,11 +20,13 @@ type UserContractWithContract = {
 
 type GlobalContract = Contract & { 
   cycleCount: number; 
+  totalQuantity: number;
   alreadyParticipated: boolean;
   activeParticipants: { user: { id: string; name: string; firstName: string; lastName: string; image: string | null } }[];
 };
 
 export default function ContractsPage() {
+  const [activeTab, setActiveTab] = useState<'available' | 'active' | 'history'>('available');
   const [contracts, setContracts] = useState<GlobalContract[]>([]);
   const [activeContracts, setActiveContracts] = useState<UserContractWithContract[]>([]);
   const [completedContracts, setCompletedContracts] = useState<UserContractWithContract[]>([]);
@@ -144,16 +146,57 @@ export default function ContractsPage() {
 
   return (
     <div className="space-y-8 pb-10">
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold text-white tracking-tight uppercase">Контракты</h1>
-          <p className="text-gray-500 mt-1 font-normal tracking-wide">Выберите задание и получите вознаграждение</p>
+      <div className="flex flex-col gap-6">
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-bold text-white tracking-tight">Контракты</h1>
+            <p className="text-gray-500 mt-1 font-normal tracking-wide">Выберите задание и получите вознаграждение</p>
+          </div>
+        </div>
+        
+        {/* Tabs */}
+        <div className="flex space-x-1 bg-[#0a0a0a] border border-[#1f1f1f] p-1 rounded-lg w-full max-w-fit">
+          <button
+            onClick={() => setActiveTab('available')}
+            className={`px-4 py-2 text-sm font-medium rounded-md transition-all ${
+              activeTab === 'available' ? 'bg-[#e81c5a] text-white shadow' : 'text-gray-400 hover:text-white hover:bg-white/5'
+            }`}
+          >
+            Доступные ({contracts.length})
+          </button>
+          <button
+            onClick={() => setActiveTab('active')}
+            className={`px-4 py-2 text-sm font-medium rounded-md transition-all ${
+              activeTab === 'active' ? 'bg-green-500 text-white shadow' : 'text-gray-400 hover:text-white hover:bg-white/5'
+            }`}
+          >
+            В работе ({activeContracts.length})
+          </button>
+          <button
+            onClick={() => setActiveTab('history')}
+            className={`px-4 py-2 text-sm font-medium rounded-md transition-all ${
+              activeTab === 'history' ? 'bg-white/10 text-white shadow' : 'text-gray-400 hover:text-white hover:bg-white/5'
+            }`}
+          >
+            История ({completedContracts.length})
+          </button>
         </div>
       </div>
 
       {/* Active Contracts Section */}
-      {activeContracts.length > 0 && (
-        <div className="space-y-6">
+      {activeTab === 'active' && activeContracts.length === 0 && (
+        <Card className="bg-[#0a0a0a] border border-[#1f1f1f] border-dashed">
+          <CardContent className="p-12 text-center flex flex-col items-center justify-center">
+            <Briefcase className="w-12 h-12 text-gray-600 mb-4" />
+            <p className="text-gray-500 font-medium pb-2">У вас нет активных контрактов</p>
+            <Button onClick={() => setActiveTab('available')} variant="link" className="text-[#e81c5a]">
+              Взять контракт
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+      {activeTab === 'active' && activeContracts.length > 0 && (
+        <div className="space-y-6 animate-in fade-in duration-300">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl bg-green-500/10 flex items-center justify-center">
@@ -233,7 +276,8 @@ export default function ContractsPage() {
       )}
 
       {/* Available Contracts Section */}
-      <div className="space-y-6">
+      {activeTab === 'available' && (
+      <div className="space-y-6 animate-in fade-in duration-300">
         <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-[#e81c5a]/10 flex items-center justify-center">
               <History className="w-5 h-5 text-[#e81c5a]" />
@@ -251,7 +295,7 @@ export default function ContractsPage() {
             </CardContent>
           </Card>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {contracts.map((contract) => {
               const isActive = isContractActive(contract.id);
               const cooldown = getCooldownRemaining(contract.cooldownUntil as any);
@@ -295,6 +339,18 @@ export default function ContractsPage() {
                             {contract.isFlexible ? contract.cycleCount : `${contract.cycleCount} / ${contract.maxSlots}`}
                           </span>
                        </div>
+
+                       {contract.totalQuantity > 0 && (
+                        <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-widest leading-none pt-1">
+                            <div className="flex items-center gap-1.5 text-gray-400">
+                              <ArrowUpRight className="w-3.5 h-3.5" />
+                              <span>Сдано всего</span>
+                            </div>
+                            <span className="text-blue-500">
+                              {contract.totalQuantity} шт.
+                            </span>
+                        </div>
+                       )}
                        
                        {!contract.isFlexible ? (
                          <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
@@ -380,24 +436,72 @@ export default function ContractsPage() {
           </div>
         )}
       </div>
+      )}
 
       {/* History Section */}
-      {completedContracts.length > 0 && (
-        <div className="space-y-6 pt-10 border-t border-white/5">
-          <h2 className="text-sm font-bold text-gray-600 tracking-widest uppercase opacity-50">История выполненных</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+      {activeTab === 'history' && completedContracts.length === 0 && (
+        <Card className="bg-[#0a0a0a] border border-[#1f1f1f] border-dashed">
+          <CardContent className="p-12 text-center flex flex-col items-center justify-center">
+            <History className="w-12 h-12 text-gray-600 mb-4" />
+            <p className="text-gray-500 font-medium">История контрактов пуста</p>
+          </CardContent>
+        </Card>
+      )}
+      {activeTab === 'history' && completedContracts.length > 0 && (
+        <div className="space-y-6 animate-in fade-in duration-500">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4 text-green-500" />
+                <h2 className="text-sm font-black text-white/40 tracking-[0.2em] uppercase">Архив выполненных задач</h2>
+            </div>
+            <div className="h-px flex-1 bg-white/5 mx-6 hidden md:block" />
+            <span className="text-[10px] font-bold text-gray-600 uppercase tracking-widest bg-white/5 px-3 py-1 rounded-full">
+                Всего {completedContracts.length}
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
             {completedContracts.map((uc) => (
-              <Card key={uc.id} className="bg-transparent border-white/5 grayscale opacity-30 hover:opacity-100 transition-opacity">
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between mb-4">
-                    <span className="text-[9px] font-bold uppercase tracking-widest text-green-500/50">Завершено</span>
-                    <span className="text-[9px] font-medium text-gray-500">
-                      {new Date(uc.startedAt).toLocaleDateString()}
-                    </span>
-                  </div>
-                  <ContractCard contract={uc.contract} />
-                </CardContent>
-              </Card>
+              <div 
+                key={uc.id} 
+                className="group relative bg-[#0a0a0a] border border-[#d1ff00]/5 hover:border-[#d1ff00]/20 rounded-2xl p-5 transition-all duration-300 overflow-hidden"
+              >
+                {/* Subtle finish gradient background */}
+                <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(209,255,0,0.02),transparent)] pointer-events-none" />
+                
+                <div className="relative z-10 space-y-4">
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2 px-2 py-1 rounded-md bg-[#d1ff00]/10 border border-[#d1ff00]/10">
+                            <CheckCircle2 className="w-3 h-3 text-[#d1ff00]" />
+                            <span className="text-[10px] font-black text-[#d1ff00] uppercase tracking-wider">Выполнено</span>
+                        </div>
+                        <span className="text-[10px] font-bold text-gray-600 uppercase tracking-widest">
+                            {new Date(uc.startedAt).toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: '2-digit' })}
+                        </span>
+                    </div>
+
+                    <div>
+                        <h3 className="text-base font-black text-white group-hover:text-[#d1ff00] transition-colors duration-300 tracking-tight leading-tight mb-1">
+                            {uc.contract.title}
+                        </h3>
+                        <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest opacity-60">
+                            {uc.contract.category || 'General'} &bull; Уровень {uc.contract.level}
+                        </p>
+                    </div>
+
+                    <div className="pt-4 border-t border-white/5 flex items-center justify-between">
+                        <div>
+                            <p className="text-[9px] font-black text-gray-600 uppercase tracking-widest mb-1">Полученная награда</p>
+                            <p className="text-lg font-black text-[#d1ff00] tracking-tighter">
+                                ${uc.contract.reward.toLocaleString('ru-RU')}
+                            </p>
+                        </div>
+                        <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center border border-white/5 group-hover:scale-110 transition-transform">
+                            <History className="w-4 h-4 text-gray-500" />
+                        </div>
+                    </div>
+                </div>
+              </div>
             ))}
           </div>
         </div>
