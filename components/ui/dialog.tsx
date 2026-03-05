@@ -9,9 +9,10 @@ interface DialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   children: React.ReactNode;
+  className?: string;
 }
 
-export function Dialog({ open, onOpenChange, children }: DialogProps) {
+export function Dialog({ open, onOpenChange, children, className }: DialogProps) {
   const [mounted, setMounted] = React.useState(false);
 
   React.useEffect(() => {
@@ -35,7 +36,10 @@ export function Dialog({ open, onOpenChange, children }: DialogProps) {
         className="fixed inset-0 bg-black/80 backdrop-blur-sm transition-opacity animate-in fade-in duration-200" 
         onClick={() => onOpenChange(false)}
       />
-      <div className="relative z-50 w-full max-w-lg bg-[#0a0a0a] border border-[#1f1f1f] rounded-xl shadow-2xl animate-in zoom-in-95 duration-200 p-6">
+      <div className={cn(
+        "relative z-50 w-full bg-[#0a0a0a] border border-[#1f1f1f] rounded-xl shadow-2xl animate-in zoom-in-95 duration-200 p-6",
+        className || "max-w-lg"
+      )}>
         {children}
         <button
           onClick={() => onOpenChange(false)}
