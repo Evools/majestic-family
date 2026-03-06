@@ -30,11 +30,13 @@ import { useEffect, useMemo, useState } from 'react';
 type ReportWithRelations = Report & {
   user: { name: string | null; image: string | null; firstName: string | null; lastName: string | null };
   userContract: {
+    cycleNumber: number;
     contract: {
       id: string;
       title: string;
       reward: number;
       maxSlots: number;
+      isFlexible: boolean;
       reputation: number;
       category: string | null;
     };
@@ -319,19 +321,24 @@ export default function AdminReportsPage() {
           {filteredReports.map((report) => {
             const participantCount = report.participants.length;
             const contractReward = report.userContract?.contract?.reward || 0;
-            const maxSlots = report.userContract?.contract?.maxSlots || 1;
+            const contract = report.userContract?.contract;
+            const maxSlots = contract?.maxSlots || 1;
+            const isFlexible = contract?.isFlexible || false;
+            const cycleNumber = report.userContract?.cycleNumber || 1;
             
-            // Calculate per-slot value (each slot gets fixed amount)
-            const slotValue = contractReward / maxSlots;
-            const userSlotShare = slotValue * 0.6;
-            const familySlotShare = slotValue * 0.4;
+            // For display purposes in admin panel, we'll use maxSlots for fixed contracts
+            // The actual calculation happens in the API based on real signer count
+            // This is just for preview/display
+            const rewardDivisionCount = maxSlots;
+            
+            // Calculate per-participant share: reward divided by participant count
+            const rewardPerParticipant = contractReward / rewardDivisionCount;
+            const individualShare = rewardPerParticipant * 0.6;
+            const familySharePerParticipant = rewardPerParticipant * 0.4;
             
             // Total shares for all participants in this report
-            const userShare = userSlotShare * participantCount;
-            const familyShare = familySlotShare * participantCount;
-            
-            // Individual share (always same per participant)
-            const individualShare = userSlotShare;
+            const userShare = individualShare * participantCount;
+            const familyShare = familySharePerParticipant * participantCount;
             const isProcessing = processingId === report.id;
             const isActive = activeAction?.id === report.id;
 

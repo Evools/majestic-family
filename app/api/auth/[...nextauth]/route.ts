@@ -20,40 +20,53 @@ export const authOptions: AuthOptions = {
         password: { label: "Password", type: "password" }
       },
       async authorize(credentials) {
-        if (!credentials?.email || !credentials?.password) {
-          return null;
-        }
-
-        const user = await prisma.user.findUnique({
-          where: {
-            email: credentials.email
+        try {
+          if (!credentials?.email || !credentials?.password) {
+            console.error('Missing credentials');
+            return null;
           }
-        });
 
-        if (!user || !user.password) {
+          const user = await prisma.user.findUnique({
+            where: {
+              email: credentials.email
+            }
+          });
+
+          if (!user) {
+            console.error('User not found:', credentials.email);
+            return null;
+          }
+
+          if (!user.password) {
+            console.error('User has no password set:', credentials.email);
+            return null;
+          }
+
+          const isPasswordValid = await bcrypt.compare(
+            credentials.password,
+            user.password
+          );
+
+          if (!isPasswordValid) {
+            console.error('Invalid password for user:', credentials.email);
+            return null;
+          }
+
+          return {
+            id: user.id,
+            name: user.name,
+            email: user.email,
+            image: user.image,
+            role: user.role,
+            status: user.status,
+            firstName: user.firstName,
+            lastName: user.lastName,
+            staticId: user.staticId,
+          };
+        } catch (error) {
+          console.error('Authorization error:', error);
           return null;
         }
-
-        const isPasswordValid = await bcrypt.compare(
-          credentials.password,
-          user.password
-        );
-
-        if (!isPasswordValid) {
-          return null;
-        }
-
-        return {
-          id: user.id,
-          name: user.name,
-          email: user.email,
-          image: user.image,
-          role: user.role,
-          status: user.status,
-          firstName: user.firstName,
-          lastName: user.lastName,
-          staticId: user.staticId,
-        };
       }
     })
   ],

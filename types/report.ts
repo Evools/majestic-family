@@ -23,4 +23,14 @@ export interface UserContractWithContract {
   status: string;
   startedAt: string | Date;
   contract: Contract;
+  signedUsers?: Array<{
+    id: string;
+    name: string | null;
+    firstName: string | null;
+    lastName: string | null;
+    image: string | null;
+    email: string | null;
+  }>;
+  participantCount?: number;
+  rewardPerParticipant?: number;
 }

@@ -233,18 +233,50 @@ export default function ReportPage() {
                                                 </div>
                                             </div>
                                             
-                                            <div className="grid grid-cols-2 gap-3">
+                                            <div className="grid grid-cols-2 gap-3 mb-4">
                                                 <div className="p-3 bg-green-500/5 border border-green-500/10 rounded-lg">
                                                     <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">За один слот (вам)</p>
-                                                    <p className="text-sm font-black text-green-400">${((uc.contract.reward / uc.contract.maxSlots) * 0.6).toLocaleString()}</p>
-                                                    <p className="text-[9px] text-gray-500 mt-1">60% одного слота</p>
+                                                    <p className="text-sm font-black text-green-400">
+                                                        ${((uc.rewardPerParticipant || (uc.contract.reward / (uc.participantCount || uc.contract.maxSlots))) * 0.6).toLocaleString()}
+                                                    </p>
+                                                    <p className="text-[9px] text-gray-500 mt-1">60% от вашей доли</p>
                                                 </div>
                                                 <div className="p-3 bg-purple-500/5 border border-purple-500/10 rounded-lg">
-                                                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Всего слотов</p>
-                                                    <p className="text-sm font-black text-purple-400">{uc.contract.maxSlots}</p>
-                                                    <p className="text-[9px] text-gray-500 mt-1">в контракте</p>
+                                                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">
+                                                        {uc.contract.isFlexible ? 'Подписало' : 'Всего слотов'}
+                                                    </p>
+                                                    <p className="text-sm font-black text-purple-400">
+                                                        {uc.participantCount || uc.contract.maxSlots}
+                                                        {!uc.contract.isFlexible && ` / ${uc.contract.maxSlots}`}
+                                                    </p>
+                                                    <p className="text-[9px] text-gray-500 mt-1">
+                                                        {uc.contract.isFlexible ? 'участников' : 'в контракте'}
+                                                    </p>
                                                 </div>
                                             </div>
+                                            
+                                            {uc.signedUsers && uc.signedUsers.length > 0 && (
+                                                <div className="p-3 bg-blue-500/5 border border-blue-500/10 rounded-lg mb-4">
+                                                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">Подписали контракт:</p>
+                                                    <div className="flex flex-wrap gap-2">
+                                                        {uc.signedUsers.map((user) => (
+                                                            <div key={user.id} className="flex items-center gap-1.5 px-2 py-1 bg-white/5 rounded text-xs">
+                                                                {user.image && (
+                                                                    <img src={user.image} alt="" className="w-4 h-4 rounded-full" />
+                                                                )}
+                                                                <span className="text-gray-300">
+                                                                    {user.firstName && user.lastName 
+                                                                        ? `${user.firstName} ${user.lastName}`
+                                                                        : user.name || user.email?.split('@')[0] || 'Неизвестно'}
+                                                                </span>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                    <p className="text-[9px] text-gray-500 mt-2">
+                                                        Награда делится между {uc.participantCount || uc.contract.maxSlots} участником(ами)
+                                                    </p>
+                                                </div>
+                                            )}
                                         </div>
 
                                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">

@@ -146,7 +146,42 @@ export async function GET() {
         },
         _sum: { quantity: true }
       });
-      return { ...uc, totalQuantity: reportsAgg._sum.quantity || 0, targetGoal: (uc.contract as any).targetGoal };
+
+      // Get list of users who signed this contract in the current cycle
+      const signedUsers = await prisma.userContract.findMany({
+        where: {
+          contractId: uc.contractId,
+          cycleNumber: uc.cycleNumber,
+          status: { in: ['ACTIVE', 'COMPLETED'] }
+        },
+        include: {
+          user: {
+            select: {
+              id: true,
+              name: true,
+              firstName: true,
+              lastName: true,
+              image: true,
+              email: true
+            }
+          }
+        }
+      });
+
+      // Determine participant count for reward calculation
+      const contract = uc.contract as any;
+      const participantCount = contract.isFlexible 
+        ? signedUsers.length || 1 
+        : contract.maxSlots;
+
+      return { 
+        ...uc, 
+        totalQuantity: reportsAgg._sum.quantity || 0, 
+        targetGoal: contract.targetGoal,
+        signedUsers: signedUsers.map(su => su.user),
+        participantCount,
+        rewardPerParticipant: contract.reward / participantCount
+      };
     }));
 
     const completed = await Promise.all(userContracts.filter(uc => uc.status === 'COMPLETED').map(async (uc) => {

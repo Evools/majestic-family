@@ -30,8 +30,8 @@ export default function WalletPage() {
             if (res.ok) {
                 const data = await res.json();
                 setBalance({
-                    available: data.availableBalance,
-                    totalEarned: data.totalEarned
+                    available: data.availableBalance ?? 0,
+                    totalEarned: data.totalEarned ?? 0
                 });
                 setPayouts(data.payouts || []);
             }

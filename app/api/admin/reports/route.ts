@@ -88,7 +88,7 @@ export async function PUT(req: Request) {
       const userContractCycle = reportWithContract.userContract;
       if (contract && userContractCycle) {
         const participantIds = participants.map(p => p.userId);
-        
+
         const existingApprovedReports = await prisma.report.findMany({
           where: {
             id: { not: reportId }, // Exclude current report
@@ -118,8 +118,8 @@ export async function PUT(req: Request) {
               conflictingUsers.add(p.userId);
             });
           });
-          
-          return NextResponse.json({ 
+
+          return NextResponse.json({
             error: `Участник(и) уже сдали отчет в этом цикле и не могут быть одобрены повторно: ${Array.from(conflictingUsers).join(', ')}`
           }, { status: 400 });
         }
@@ -130,19 +130,32 @@ export async function PUT(req: Request) {
       const userSharePercent = settings?.userSharePercent || 60;
       const familySharePercent = settings?.familySharePercent || 40;
 
-      // Calculate slot value (each participant occupies one slot)
-      const slotValue = contract.reward / contract.maxSlots;
-      
-      // Each participant gets a fixed share per slot
-      const userSlotShare = slotValue * (userSharePercent / 100);
-      const familySlotShare = slotValue * (familySharePercent / 100);
-      
-      // Individual participant share (same for all in this report)
-      const individualShare = userSlotShare;
-      
-      // Family share (multiplied by number of participants in this report)
-      const familyShare = familySlotShare * participants.length;
-      const totalUserShare = userSlotShare * participants.length;
+      // Determine the number of participants to divide the reward by
+      let participantCount: number;
+      if (contract.isFlexible) {
+        // For flexible contracts: count actual participants who signed the contract in this cycle
+        const signedParticipants = await prisma.userContract.findMany({
+          where: {
+            contractId: contract.id,
+            cycleNumber: userContractCycle?.cycleNumber || contract.currentCycle,
+            status: { in: ['ACTIVE', 'COMPLETED'] }
+          },
+          select: { userId: true }
+        });
+        participantCount = signedParticipants.length || 1; // At least 1 to avoid division by zero
+      } else {
+        // For fixed contracts: use maxSlots
+        participantCount = contract.maxSlots;
+      }
+
+      // Calculate per-participant share: reward divided by participant count
+      const rewardPerParticipant = contract.reward / participantCount;
+      const individualShare = rewardPerParticipant * (userSharePercent / 100);
+      const familySharePerParticipant = rewardPerParticipant * (familySharePercent / 100);
+
+      // Total shares for all participants in this report
+      const familyShare = familySharePerParticipant * participants.length;
+      const totalUserShare = individualShare * participants.length;
 
       // Update report and create participant shares in a transaction
       const report = await prisma.$transaction(async (tx) => {
