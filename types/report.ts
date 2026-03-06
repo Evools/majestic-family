@@ -6,15 +6,6 @@ export interface ReportFormState {
   quantity: string;
   proof: string;
   comment: string;
-  participantIds: string[];
-}
-
-export interface Member {
-  id: string;
-  name: string | null;
-  firstName: string | null;
-  lastName: string | null;
-  image: string | null;
 }
 
 export interface UserContractWithContract {

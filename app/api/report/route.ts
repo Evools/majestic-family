@@ -13,7 +13,7 @@ export async function POST(req: Request) {
     }
 
     const body = await req.json();
-    const { userContractId, itemName, quantity, proof, comment, participantIds } = body;
+    const { userContractId, itemName, quantity, proof, comment } = body;
 
     if (!userContractId || !itemName || !quantity || !proof) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
@@ -44,8 +44,8 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Contract not found or not active" }, { status: 404 });
     }
 
-    // Check if user or any participants already have approved reports in this cycle
-    const allParticipantIds = [user.id, ...(participantIds || [])];
+    // Check if user already has approved reports in this cycle
+    const allParticipantIds = [user.id];
     const existingApprovedReports = await prisma.report.findMany({
       where: {
         userContract: {
@@ -87,7 +87,7 @@ export async function POST(req: Request) {
       }, { status: 400 });
     }
 
-    // Create report and add participants in a transaction
+    // Create report and add creator as participant in a transaction
     const report = await prisma.$transaction(async (tx) => {
       const newReport = await tx.report.create({
         data: {
@@ -102,20 +102,14 @@ export async function POST(req: Request) {
         },
       });
 
-      // Add participants (always include creator)
-      const uniqueParticipantIds = Array.from(new Set([user.id, ...(participantIds || [])]));
-
-      await Promise.all(
-        uniqueParticipantIds.map((pid) =>
-          tx.reportParticipant.create({
-            data: {
-              reportId: newReport.id,
-              userId: pid as string,
-              share: 0,
-            },
-          })
-        )
-      );
+      // Add creator as participant
+      await tx.reportParticipant.create({
+        data: {
+          reportId: newReport.id,
+          userId: user.id,
+          share: 0,
+        },
+      });
 
       return newReport;
     });

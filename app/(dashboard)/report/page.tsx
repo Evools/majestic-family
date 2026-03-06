@@ -1,11 +1,10 @@
 'use client';
 
-import { ParticipantSelector } from '@/components/report/participant-selector';
 import { ReportFormFields } from '@/components/report/report-form-fields';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { useToast } from '@/components/ui/notifications/notification-context';
-import { Member, ReportFormState, UserContractWithContract } from '@/types/report';
+import { ReportFormState, UserContractWithContract } from '@/types/report';
 import { AlertCircle, ChevronDown, Send } from 'lucide-react';
 import { useSession } from 'next-auth/react';
 import Link from 'next/link';
@@ -20,26 +19,13 @@ export default function ReportPage() {
     const [activeContracts, setActiveContracts] = useState<UserContractWithContract[]>([]);
     const [loading, setLoading] = useState(true);
     const [reportForms, setReportForms] = useState<ReportFormState[]>([]);
-    const [members, setMembers] = useState<Member[]>([]);
     
     // Accordion State: store the ID of the currently expanded contract
     const [expandedIds, setExpandedIds] = useState<string[]>([]);
 
     useEffect(() => {
       fetchActiveContracts();
-      fetchMembers();
     }, []);
-
-    const fetchMembers = async () => {
-        try {
-            const res = await fetch('/api/members');
-            if (res.ok) {
-                setMembers(await res.json());
-            }
-        } catch (error) {
-            console.error('Failed to fetch members:', error);
-        }
-    };
 
     const fetchActiveContracts = async () => {
       try {
@@ -54,7 +40,6 @@ export default function ReportPage() {
             quantity: '',
             proof: '',
             comment: '',
-            participantIds: [],
           })) || []);
 
           // Auto-expand the first contract if exists
@@ -279,27 +264,12 @@ export default function ReportPage() {
                                             )}
                                         </div>
 
-                                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                                        <div className="grid grid-cols-1 gap-8">
                                             <div>
                                                  <ReportFormFields 
                                                     form={form} 
                                                     index={index} 
                                                     onUpdate={(field, value) => updateForm(index, field, value)} 
-                                                />
-                                            </div>
-                                            <div className="lg:border-l lg:border-white/10 lg:pl-8">
-                                                <ParticipantSelector 
-                                                    selectedIds={form.participantIds}
-                                                    members={members}
-                                                    session={session}
-                                                    onAdd={(val) => {
-                                                        const updatedIds = [...form.participantIds, val];
-                                                        updateForm(index, 'participantIds', updatedIds);
-                                                    }}
-                                                    onRemove={(pid) => {
-                                                        const updatedIds = form.participantIds.filter(id => id !== pid);
-                                                        updateForm(index, 'participantIds', updatedIds);
-                                                    }}
                                                 />
                                             </div>
                                         </div>
