@@ -218,7 +218,7 @@ export default function ReportPage() {
                                                 </div>
                                             </div>
                                             
-                                            <div className="grid grid-cols-2 gap-3 mb-4">
+                                            <div className="grid grid-cols-2 gap-3 mb-2">
                                                 <div className="p-3 bg-green-500/5 border border-green-500/10 rounded-lg">
                                                     <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">За один слот (вам)</p>
                                                     <p className="text-sm font-black text-green-400">
@@ -239,6 +239,10 @@ export default function ReportPage() {
                                                     </p>
                                                 </div>
                                             </div>
+                                            <p className="text-[9px] text-gray-500">
+                                                Общая ставка: <span className="text-green-400 font-semibold">60%</span> награды контракта делится между участниками, 
+                                                а <span className="text-purple-400 font-semibold">40%</span> уходит в семейный баланс.
+                                            </p>
                                             
                                             {uc.signedUsers && uc.signedUsers.length > 0 && (
                                                 <div className="p-3 bg-blue-500/5 border border-blue-500/10 rounded-lg mb-4">
